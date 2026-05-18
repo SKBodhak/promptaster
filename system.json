@@ -1,0 +1,30 @@
+{
+  "features": {
+    "showSettings": true,
+    "showLegal": true,
+    "showDevProfile": true
+  },
+  "menuText": {
+    "settings": "Settings",
+    "legal": "Legal",
+    "developer": "Developer",
+    "footerHtml": "Made with <span style=\"color: var(--accent-danger);\">❤️</span> by SKBodhak"
+  },
+  "bottomNavText": {
+    "home": "Home",
+    "create": "Create",
+    "library": "Library"
+  },
+  "contactButtons": [],
+  "notifSortOrder": "newest",
+  "popupSortOrder": "newest",
+  "notifications": [],
+  "popups": [],
+  "toasts": {
+    "copied": "Copied to clipboard!",
+    "saved": "Saved to library!",
+    "removed": "Removed from library!",
+    "created": "Prompt created successfully!",
+    "sent": "Message sent to Admin!"
+  }
+}

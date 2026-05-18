@@ -1,0 +1,27 @@
+{
+  "legal": {
+    "tosTitle": "Terms of Service",
+    "tosText": "Welcome to PromptNova. By using this service, you agree to respect the community guidelines and fair use policies.",
+    "privacyTitle": "Privacy Policy",
+    "privacyText": "Your privacy is important to us. We securely store your login tokens and do not share data with third parties."
+  },
+  "developer": {
+    "name": "Shyam Kumar Bodhak",
+    "handle": "@SKBodhak",
+    "badge": "Creator & Admin",
+    "avatarType": "text",
+    "avatarText": "SKB",
+    "avatarImgUrl": "",
+    "showQuote": true,
+    "quote": "God of None is the voice. Shyam is the mind.",
+    "skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "Firebase",
+      "GitHub"
+    ],
+    "buttons": [],
+    "socials": []
+  }
+}

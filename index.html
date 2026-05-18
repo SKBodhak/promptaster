@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="pageTitle">PromptNova</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, runTransaction, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmgblBaGUFJI9kqKlnrSRkRSLsARXHAOY",
+            authDomain: "promptaster-9110c.firebaseapp.com",
+            databaseURL: "https://promptaster-9110c-default-rtdb.firebaseio.com/",
+            projectId: "promptaster-9110c",
+            storageBucket: "promptaster-9110c.firebasestorage.app",
+            messagingSenderId: "439971394403",
+            appId: "1:439971394403:web:eb5d89c60aabb56f61d956"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.db = getDatabase(app);
+            window.fbRef = ref;
+            window.fbRunTransaction = runTransaction;
+            window.fbOnValue = onValue;
+            console.log("Client Firebase Connected!");
+        } catch(e) { console.error("Firebase Init Error", e); }
+    </script>
+
+    <style>
+        /* --- DESIGN TOKENS --- */
+        :root {
+            --bg-main: #050505; --bg-surface: #0E0E11; --bg-input: #16161A; --bg-prompt-box: #1A1A24;    
+            --text-primary: #FAFAFA; --text-secondary: #A1A1AA; --text-prompt: #E2E8F0;
+            --accent-purple: #818CF8; 
+            --accent-danger: #F43F5E; --border-color: #27272A;
+            --font-main: 'Inter', sans-serif; --radius-md: 12px; --radius-lg: 20px; --transition-speed: 0.3s;
+        }
+
+        body.light-theme {
+            --bg-main: #F8FAFC; --bg-surface: #FFFFFF; --bg-input: #F1F5F9; --bg-prompt-box: #F1F5F9;    
+            --text-primary: #0F172A; --text-secondary: #64748B; --text-prompt: #1E293B; --border-color: #E2E8F0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-main); color: var(--text-primary); font-family: var(--font-main); padding-bottom: 90px; -webkit-font-smoothing: antialiased; overflow-x: hidden; transition: background-color var(--transition-speed); }
+        .container { max-width: 1200px; margin: 0 auto; position: relative; }
+        .hidden-by-config { display: none !important; }
+
+        /* --- LOGGED-OUT BLUR STATE --- */
+        body.logged-out .prompt-box { filter: blur(6px); opacity: 0.5; user-select: none; pointer-events: none; }
+        .prompt-box-wrapper { position: relative; flex: 1; display: flex; flex-direction: column; }
+        .locked-msg { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.15); pointer-events: none; white-space: nowrap; z-index: 15;}
+        body.logged-out .locked-msg { display: flex; align-items: center; gap: 6px; }
+
+        /* --- DYNAMIC TOP BANNERS --- */
+        #banner-container { width: 100%; display: flex; flex-direction: column; z-index: 50;}
+        .top-banner { display: flex; justify-content: space-between; align-items: center; background: rgba(129, 140, 248, 0.1); border-bottom: 1px solid rgba(129, 140, 248, 0.2); padding: 12px 24px; color: var(--text-primary); font-size: 13px; text-decoration: none; transition: 0.2s;}
+        .top-banner.clickable { cursor: pointer; } .top-banner.clickable:hover { background: rgba(129, 140, 248, 0.15); }
+        .top-banner-content { flex: 1; line-height: 1.5; }
+        .top-banner-actions { display: flex; gap: 8px; align-items: center; margin-left: 16px; }
+        .btn-banner { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer; transition: 0.2s;}
+        .btn-banner.primary { background: var(--accent-purple); color: #fff; border: none; }
+        .btn-banner.outline { background: transparent; border: 1px solid var(--accent-purple); color: var(--accent-purple); }
+        .btn-banner-close { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px; padding: 4px; display: flex; align-items: center; justify-content: center;}
+
+        /* --- HEADER & MENU --- */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; position: sticky; top: 0; z-index: 100; background: rgba(5, 5, 5, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color); }
+        body.light-theme header { background: rgba(248, 250, 252, 0.85); }
+        .header-left, .header-right { display: flex; align-items: center; gap: 12px; }
+        .menu-btn { background: transparent; border: none; color: var(--text-primary); cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center;}
+        .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; } .logo-text span { color: var(--accent-purple); }
+        .login-btn { background: rgba(129, 140, 248, 0.1); border: 1px solid rgba(129, 140, 248, 0.3); color: var(--accent-purple); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;}
+        .login-btn:hover { background: var(--accent-purple); color: #fff; }
+        
+        .menu-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s ease; }
+        .menu-overlay.active { opacity: 1; pointer-events: all; }
+        .side-menu { position: fixed; top: 0; bottom: 0; left: -320px; width: 320px; background: var(--bg-surface); z-index: 2001; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .side-menu.active { left: 0; }
+        .menu-header { padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: var(--bg-input); border: none; color: var(--text-secondary); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;}
+        .menu-links { padding: 24px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto;}
+        .menu-link { display: flex; align-items: center; padding: 14px 16px; color: var(--text-primary); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 12px; cursor: pointer; background: transparent; border: 1px solid transparent; gap: 14px; transition: 0.2s; }
+        .menu-link:hover { background: var(--bg-input); }
+        .menu-link svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+        
+        /* Made in Bottom Text */
+        .menu-footer { padding: 20px; text-align: center; font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border-color); opacity: 0.8; }
+        .menu-footer span { color: var(--accent-danger); font-size: 14px; }
+
+        /* --- CONTROLS & SEARCH --- */
+        .controls-section { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+        @media (min-width: 600px) { .controls-section { flex-direction: row; justify-content: space-between; align-items: center; } }
+        .search-filter-row { display: flex; gap: 12px; width: 100%; flex: 1;}
+        .search-box { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0 16px; min-width: 0; transition: var(--transition-speed);}
+        .search-box:focus-within { border-color: var(--accent-purple); }
+        .search-icon { width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; color: var(--text-secondary); }
+        .search-input { flex: 1; background: transparent; border: none; color: var(--text-primary); font-family: var(--font-main); font-size: 14px; padding: 14px 0; outline: none; min-width: 0; }
+        .clear-search-btn { background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; display: none; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; padding: 0; transition: 0.2s;}
+        .clear-search-btn:hover { background: var(--accent-danger); color: #fff; border-color: var(--accent-danger); }
+        .clear-search-btn svg { width: 14px; height: 14px; }
+        
+        /* Custom UI Dropdown */
+        select { display: none !important; }
+        .custom-select { position: relative; width: 130px; flex-shrink: 0; user-select: none; }
+        .select-trigger { display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 13px 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; height: 100%;}
+        .select-trigger svg { width: 16px; height: 16px; color: var(--text-secondary); transition: transform 0.3s; }
+        .custom-select.active .select-trigger { border-color: var(--accent-purple); }
+        .custom-select.active .select-trigger svg { transform: rotate(180deg); }
+        .select-options { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.5); overflow: hidden; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: 0.2s; z-index: 50; max-height: 250px; overflow-y: auto;}
+        .custom-select.active .select-options { opacity: 1; pointer-events: all; transform: translateY(0); }
+        .select-option { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: 0.2s; border-bottom: 1px solid var(--border-color);}
+        .select-option:hover { background: var(--bg-input); color: var(--text-primary); }
+        .select-option.selected { color: var(--accent-purple); background: rgba(129, 140, 248, 0.1); }
+        .date-picker-row { display: flex; gap: 8px; width: 100%; }
+        .date-picker-row .custom-select { flex: 1; width: auto; }
+        
+        .view-toggles { display: flex; gap: 4px; background: var(--bg-input); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-color); align-self: flex-start;}
+        .view-btn { background: transparent; border: none; color: var(--text-secondary); padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .view-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .view-btn.active { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+        /* --- CAROUSEL & CARDS --- */
+        .section-title { padding: 0 24px; font-size: 18px; font-weight: 700; margin-bottom: 16px; display: none; color: var(--text-primary); }
+        .gallery { padding: 0 24px 40px; display: grid; gap: 24px; transition: 0.3s;}
+        .empty-state { display: none; text-align: center; padding: 60px 20px; color: var(--text-secondary); grid-column: 1 / -1; }
+        body.data-saver .carousel-slide { filter: blur(8px) grayscale(0.4); opacity: 0.7; }
+        body.data-saver .data-saver-badge { display: block; }
+        
+        .card { background: var(--bg-surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-color); position: relative; display: flex; flex-direction: column; transition: 0.3s;}
+        .card:hover { border-color: var(--accent-purple); box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: translateY(-4px);}
+        
+        .carousel-wrapper { position: relative; width: 100%; aspect-ratio: 4/5; overflow: hidden; background: #000; }
+        .carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .carousel-track::-webkit-scrollbar { display: none; }
+        .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: center; object-fit: cover; transition: 0.5s; }
+        .carousel-indicators { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10; pointer-events: none;}
+        .indicator-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
+        .indicator-dot.active { background: #fff; width: 16px; border-radius: 4px;}
+
+        .card-top-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 25; }
+        .icon-btn { height: 36px; padding: 0 12px; border-radius: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
+        .icon-btn.liked { color: var(--accent-danger); border-color: rgba(244, 63, 94, 0.4); }
+        .icon-btn.liked svg { fill: var(--accent-danger); stroke: var(--accent-danger); transform: scale(1.15);}
+
+        /* Views */
+        .gallery.grid-view { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        .gallery.grid-view .carousel-wrapper { aspect-ratio: 3/4.5; position: absolute; inset: 0;}
+        .gallery.grid-view .card { aspect-ratio: 3/4.5; }
+        .gallery.grid-view .card-body { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 40px 16px 16px; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%); display: flex; flex-direction: column; gap: 12px; pointer-events: none;}
+        .gallery.grid-view .prompt-box { font-size: 14px; font-weight: 500; line-height: 1.4; color: #fff; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; pointer-events: auto; transition: 0.3s;}
+        
+        .gallery.card-view { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        .gallery.card-view .card-body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+        .gallery.card-view .prompt-box { font-size: 13px; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; transition: 0.3s;}
+        
+        .gallery.detail-view { grid-template-columns: 1fr; max-width: 600px; margin: 0 auto; }
+        .gallery.detail-view .carousel-wrapper { aspect-ratio: 16/9; }
+        .gallery.detail-view .card-body { padding: 20px; display: flex; flex-direction: column; flex: 1;}
+        .gallery.detail-view .prompt-box { background: var(--bg-prompt-box); padding: 16px; border-radius: 12px; font-size: 14px; line-height: 1.6; border: 1px solid var(--border-color); transition: 0.3s;}
+
+        /* Split Pill Button Design */
+        .card-actions { display: flex; width: 100%; height: 44px; margin-top: 12px; border-radius: 100px; overflow: hidden; pointer-events: auto; }
+        .gallery.grid-view .card-actions { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
+        .gallery:not(.grid-view) .card-actions { background: var(--bg-input); border: 1px solid var(--border-color); margin-top: auto;}
+
+        .btn-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; font-family: inherit; transition: 0.2s; color: var(--text-primary); }
+        .gallery.grid-view .btn-action { color: #FFF; }
+        .btn-action:hover { background: rgba(255, 255, 255, 0.08); }
+        .gallery:not(.grid-view) .btn-action:hover { background: var(--bg-surface); }
+        .btn-copy { border-right: 1px solid rgba(255, 255, 255, 0.15); }
+        .gallery:not(.grid-view) .btn-copy { border-right-color: var(--border-color); }
+        .btn-action svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; transition: 0.2s; }
+        .btn-like.liked { color: var(--accent-danger) !important; }
+        .btn-like.liked svg { fill: var(--accent-danger); stroke: var(--accent-danger); transform: scale(1.15); filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));}
+
+        /* --- BEAUTIFUL BOTTOM NAVIGATION --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(14, 14, 17, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: center; gap: 15%; align-items: center; padding: 12px 0 24px 0; z-index: 1000; }
+        body.light-theme .bottom-nav { background: rgba(255, 255, 255, 0.85); border-top-color: var(--border-color);}
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 11px; font-weight: 600; width: 64px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;}
+        .nav-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.5; transition: 0.3s;}
+        .nav-item.active { color: var(--accent-purple); }
+        .nav-item.active svg { stroke-width: 2.5; transform: translateY(-3px); filter: drop-shadow(0 4px 6px rgba(129, 140, 248, 0.4));}
+        .nav-item::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%) scaleX(0); width: 12px; height: 3px; background: var(--accent-purple); border-radius: 4px; transition: 0.3s; }
+        .nav-item.active::after { transform: translateX(-50%) scaleX(1); }
+
+        .nav-item-center { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-primary); font-size: 11px; font-weight: 600; cursor: pointer; transform: translateY(-24px); }
+        .center-btn { width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent-purple), #C084FC); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 8px 25px rgba(129, 140, 248, 0.5); border: 6px solid var(--bg-main); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+        .nav-item-center:hover .center-btn { transform: scale(1.1); }
+        @media (min-width: 768px) { .bottom-nav { display: none; } body { padding-bottom: 0; } }
+
+        /* --- MODALS --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 3000; padding: 20px; }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-box { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 24px; width: 100%; max-width: 420px; transform: translateY(20px) scale(0.95); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;}
+        .modal-overlay.active .modal-box { transform: translateY(0) scale(1); }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); z-index: 10;}
+        .modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 10px;}
+        .modal-close { background: var(--bg-input); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .modal-close:hover { background: var(--border-color); color: var(--text-primary); }
+        .modal-body { padding: 24px; overflow-y: auto; flex: 1;}
+
+        /* Settings Modal Views */
+        .settings-container { position: relative; width: 100%; overflow-x: hidden; flex: 1; display: flex; flex-direction: column;}
+        .settings-view { width: 100%; padding: 24px; transition: transform 0.3s ease; display: none; }
+        .settings-view.active { display: block; animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .setting-category { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s;}
+        .setting-category:hover { border-color: var(--accent-purple); transform: translateX(4px);}
+        .category-info { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 15px;}
+        .category-info svg { width: 20px; height: 20px; stroke: var(--text-primary); fill: none; stroke-width: 2;}
+        
+        .back-btn { background: rgba(129, 140, 248, 0.1); border: none; color: var(--accent-purple); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 24px; padding: 8px 16px; border-radius: 20px; transition: 0.2s;}
+        .back-btn:hover { background: rgba(129, 140, 248, 0.2); transform: translateX(-4px);}
+        .back-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5;}
+
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border-color); }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-label { font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; flex-direction: column; gap: 4px;}
+        .setting-desc { font-size: 12px; color: var(--text-secondary); font-weight: 400;}
+        
+        /* Beautiful Toggles */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;}
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        input:checked + .slider { background-color: var(--accent-purple); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Forms & Buttons */
+        .input-group { margin-bottom: 16px; }
+        .input-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .form-input { width: 100%; padding: 14px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-family: var(--font-main); font-size: 14px; outline: none; transition: 0.2s; }
+        
+        .modal-btn { width: 100%; padding: 16px; background: var(--accent-purple); color: #FFF; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;}
+        .modal-btn:hover:not(:disabled) { filter: brightness(1.1); }
+        .modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .submit-type-switch { display: flex; background: var(--bg-input); border-radius: 12px; padding: 4px; margin-bottom: 20px;}
+        .type-btn { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-radius: 8px; transition: 0.2s;}
+        .type-btn.active { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+        /* --- DYNAMIC POPUPS --- */
+        #dynamic-popups-container { z-index: 3500; }
+        .dynamic-popup-card { background: var(--bg-surface); padding: 32px 24px; text-align: center; position: relative; border-radius: 24px; border: 1px solid var(--border-color); max-width: 400px; width: 100%; margin: auto;}
+        .dp-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);}
+        .dp-msg { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;}
+        .dp-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;}
+        .dp-btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none; cursor: pointer; display: inline-flex; justify-content: center; align-items: center;}
+        .dp-btn.primary { background: var(--accent-purple); color: #fff; border: none;}
+        .dp-btn.outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border-color);}
+
+        /* Premium Dev Profile */
+        .dev-glass-card { position: relative; overflow: hidden; background: var(--bg-surface); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 40px 32px 32px; text-align: center; }
+        .dev-bg-glow { position: absolute; width: 250px; height: 250px; background: radial-gradient(circle, var(--accent-purple) 0%, transparent 70%); opacity: 0.12; top: -100px; left: 50%; transform: translateX(-50%); filter: blur(40px); }
+        .dev-close { position: absolute; top: 16px; right: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; z-index: 10; display:flex; align-items:center; justify-content:center;}
+        .dev-avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 16px; background: linear-gradient(135deg, #1A1A24, #050505); border: 1px solid rgba(255, 255, 255, 0.12); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 300; color: var(--text-primary); position: relative; z-index: 2; overflow: hidden;}
+        .dev-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .pro-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; background: rgba(129, 140, 248, 0.1); border: 1px solid rgba(129, 140, 248, 0.2); color: var(--accent-purple); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 24px; }
+        .dev-info h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px;}
+        .dev-handle { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .dev-philosophy { margin: 28px 0; padding: 0 10px; position: relative; }
+        .dev-philosophy p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; font-style: italic; }
+        .dev-projects-skills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 32px; }
+        .minimal-tag { padding: 6px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; font-size: 12px; color: var(--text-secondary); }
+        .dev-social-row { display: flex; justify-content: center; gap: 20px; margin-bottom: 32px; }
+        .minimal-social { color: var(--text-secondary); background: transparent; border: none; cursor: pointer; text-decoration: none;}
+        .minimal-social svg { width: 22px; height: 22px; fill: currentColor; stroke: currentColor; }
+        
+        .dev-btn { width: 100%; padding: 14px; border-radius: 14px; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; transition: 0.2s;}
+        .dev-btn.primary { background: var(--text-primary); color: var(--bg-main); }
+        .dev-btn.outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border-color); }
+
+        /* CUSTOM INBUILT ALERT MODAL */
+        #customAlertModal { z-index: 5000 !important; }
+        .system-modal-box { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 16px; width: 100%; max-width: 340px; padding: 24px; text-align: center; transform: scale(0.9); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay.active .system-modal-box { transform: scale(1); }
+        .sys-modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; gap: 12px;}
+        .sys-modal-title svg { color: var(--accent-purple); }
+        .sys-modal-msg { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+        .sys-modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .sys-btn { flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: 0.2s;}
+        .sys-btn-primary { background: var(--accent-purple); color: #fff; }
+        .sys-btn-primary:hover { filter: brightness(1.1); }
+
+        #toast { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-primary); color: var(--bg-main); padding: 14px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; z-index: 4000; transition: 0.3s; white-space: nowrap; box-shadow: 0 10px 25px rgba(0,0,0,0.2);}
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .auth-canvas-container { display: none; }
+        .mock-db-warning { padding: 12px; background: rgba(129, 140, 248, 0.1); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 8px; font-size: 12px; color: var(--accent-purple); margin-bottom: 16px; line-height: 1.5;}
+    </style>
+</head>
+<body>
+
+    <div id="banner-container"></div>
+
+    <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+    <aside class="side-menu" id="sideMenu">
+        <div class="menu-header">
+            <div class="logo-text" id="menuLogoText">Prompt<span>Nova</span></div>
+            <button class="close-btn" onclick="closeMenu()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        </div>
+        <div class="menu-links">
+            <button class="menu-link" onclick="openSubModal('settingsModal')" id="btnSettingsMenu">
+                <div class="left-content">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <span id="txtSettingsMenu">Settings</span>
+                </div>
+            </button>
+            <button class="menu-link" onclick="openSubModal('legalModal')" id="btnLegalMenu">
+                <div class="left-content">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span id="txtLegalMenu">Legal</span>
+                </div>
+            </button>
+            <div style="height: 1px; background: var(--border-color); margin: 10px 0;"></div>
+            <button class="menu-link" onclick="openSubModal('devModal')" id="btnDevMenu">
+                <div class="left-content">
+                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span id="txtDevMenu">Developer</span>
+                </div>
+            </button>
+        </div>
+        
+        <div id="menuFooterInject" class="menu-footer">
+            Made with <span>❤️</span> by SKBodhak
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="openMenu()"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+                <div class="logo-text" id="headerLogoText">Prompt<span>Nova</span></div>
+            </div>
+            
+            <div class="header-right">
+                <button class="login-btn" id="navAuthBtn" onclick="openModal('authModal')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                    <span>Login</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="controls-section">
+            <div class="search-filter-row">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search prompts..." oninput="handleSearch()">
+                    <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <div class="custom-select" id="categoryDropdown">
+                    <div class="select-trigger" onclick="toggleDropdown('categoryDropdown')">
+                        <span id="dropdown-label">All Styles</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="select-options" id="filterOptionsDiv">
+                        <div class="select-option selected" onclick="selectFilter(this, 'all', 'All Styles')">All Styles</div>
+                        <div class="select-option" onclick="selectFilter(this, 'portrait', 'Portrait')">Portrait</div>
+                        <div class="select-option" onclick="selectFilter(this, 'sci-fi', 'Sci-Fi')">Sci-Fi</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-toggles">
+                <button class="view-btn" id="btn-detail" onclick="setView('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg></button>
+                <button class="view-btn" id="btn-card" onclick="setView('card')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
+                <button class="view-btn active" id="btn-grid" onclick="setView('grid')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
+            </div>
+        </div>
+
+        <h2 class="section-title" id="sectionTitle">Your Library</h2>
+
+        <main class="gallery grid-view" id="gallery-container">
+            <div id="loadingState" style="text-align:center; padding: 60px 20px; color: var(--text-secondary); width: 100%; grid-column: 1/-1;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin-bottom: 16px; animation: spin 2s linear infinite;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <h3>Loading Content...</h3>
+            </div>
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                <h3>Nothing found</h3>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="dynamic-popups-container"></div>
+
+    <nav class="bottom-nav">
+        <a class="nav-item active" id="navHome" onclick="switchMainView('home')">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span id="navTxtHome">Home</span>
+        </a>
+        <div class="nav-item-center" onclick="handleProtectedAction('submitModal')">
+            <div class="center-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            <span id="navTxtCreate">Create</span>
+        </div>
+        <a class="nav-item" id="navLib" onclick="switchMainView('library')">
+            <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+            <span id="navTxtLib">Library</span>
+        </a>
+    </nav>
+
+    <div class="modal-overlay" id="submitModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Formula</h2>
+                <button class="modal-close" onclick="closeModal('submitModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="submit-type-switch">
+                    <div class="type-btn active" id="btn-submit-public" onclick="switchSubmitType(this, 'public')">Public</div>
+                    <div class="type-btn" id="btn-submit-direct" onclick="switchSubmitType(this, 'direct')">Message</div>
+                </div>
+
+                <div id="form-public">
+                    <div class="input-group">
+                        <label class="input-label">Image URL</label>
+                        <input type="text" class="form-input" id="newImgUrl" placeholder="https://picsum.photos/800/600">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Category</label>
+                        <div class="custom-select" id="newCatDropdown" style="width: 100%;">
+                            <input type="hidden" id="newCategory" value="portrait">
+                            <div class="select-trigger" onclick="toggleDropdown('newCatDropdown')"><span id="lbl_newCategory">Portrait</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                            <div class="select-options">
+                                <div class="select-option selected" onclick="updateCustomDD(this, 'newCategory', 'lbl_newCategory', 'portrait')">Portrait</div>
+                                <div class="select-option" onclick="updateCustomDD(this, 'newCategory', 'lbl_newCategory', 'sci-fi')">Sci-Fi</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Prompt Text</label>
+                        <textarea class="form-input" id="newPromptText" rows="4" style="resize: none;" placeholder="Describe your image..."></textarea>
+                    </div>
+                    <button class="modal-btn" onclick="submitPrompt()">Submit for Approval</button>
+                </div>
+
+                <div id="form-direct" style="display: none;">
+                    <div class="input-group">
+                        <label class="input-label">Message</label>
+                        <textarea class="form-input" rows="5" style="resize: none;" placeholder="Write your message..."></textarea>
+                    </div>
+                    <button class="modal-btn" style="margin-bottom:14px;" onclick="closeModal('submitModal'); triggerToast(window.toastConfig.sent)">Send Message</button>
+                    
+                    <label class="input-label">Or Direct Connect with Admin</label>
+                    <div class="admin-dm-grid" id="injectAdminChatGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box" style="padding: 0; max-height: 80vh;">
+            <div class="modal-header"><h2 class="modal-title">Settings</h2><button class="modal-close" onclick="closeSubModal('settingsModal')">✕</button></div>
+            <div class="settings-container">
+                <div class="settings-view active" id="setting-main">
+                    <div class="setting-category" onclick="navSettings('setting-appearance')"><div class="category-info">Appearance</div><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-secondary)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                    <div class="setting-category" onclick="navSettings('setting-data')"><div class="category-info">Data & Quality</div><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-secondary)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                    <div class="setting-category" onclick="navSettings('setting-system')"><div class="category-info">System & Interactions</div><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-secondary)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+                <div class="settings-view" id="setting-appearance">
+                    <button class="back-btn" onclick="navSettings('setting-main')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg> Back</button>
+                    <div class="setting-item"><div class="setting-label">Light Theme</div><label class="switch"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label></div>
+                </div>
+                <div class="settings-view" id="setting-data">
+                    <button class="back-btn" onclick="navSettings('setting-main')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg> Back</button>
+                    <div class="setting-item"><div class="setting-label">Data Saver Mode</div><label class="switch"><input type="checkbox" id="dataSaverToggle" onchange="toggleDataSaver()"><span class="slider"></span></label></div>
+                </div>
+                <div class="settings-view" id="setting-system">
+                    <button class="back-btn" onclick="navSettings('setting-main')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg> Back</button>
+                    <div class="setting-item"><div class="setting-label">Auto-Copy on Click</div><label class="switch"><input type="checkbox" id="autoCopyToggle" onchange="toggleAutoCopy()"><span class="slider"></span></label></div>
+                    <div class="setting-item"><div class="setting-label">Haptic Feedback</div><label class="switch"><input type="checkbox" checked onchange="toggleHaptics(this)"><span class="slider"></span></label></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="legalModal">
+        <div class="modal-box">
+            <div class="modal-header"><h2 class="modal-title" id="legalModalTitle">Legal</h2><button class="modal-close" onclick="closeSubModal('legalModal')">✕</button></div>
+            <div class="modal-body" style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                <h4 style="color: var(--text-primary); margin-bottom: 4px; font-size: 15px;" id="tosTitle">Terms</h4><p style="margin-bottom: 16px;" id="tosText">Loading...</p>
+                <h4 style="color: var(--text-primary); margin-bottom: 4px; font-size: 15px;" id="privacyTitle">Privacy</h4><p style="margin-bottom: 24px;" id="privacyText">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="devModal">
+        <div class="modal-box" style="background: transparent; border: none; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
+            <div class="dev-glass-card">
+                <button class="dev-close" onclick="closeSubModal('devModal')">✕</button>
+                <div class="dev-bg-glow"></div>
+                <div class="dev-avatar" id="devAvatarEl"><span>...</span></div>
+                <div class="pro-badge" id="devBadgeEl">...</div>
+                <div class="dev-info">
+                    <h2 id="devNameEl">Loading...</h2><p class="dev-handle" id="devHandleEl">@loading</p>
+                    <div class="dev-philosophy" id="devQuoteContainer"><p id="devQuoteEl">...</p></div>
+                </div>
+                <div class="dev-projects-skills" id="devSkillsEl"></div>
+                <div class="dev-social-row" id="devSocialsEl"></div>
+                <div id="devButtonsInject"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-box">
+            <div class="modal-header"><h2 class="modal-title" id="authTitle">Account Log In</h2><button class="modal-close" onclick="closeModal('authModal')">✕</button></div>
+            <div class="modal-body">
+                <div class="mock-db-warning"><b>Note:</b> For security, your account recovery token string is generated live on registration. Keep it safe.</div>
+                <div class="submit-type-switch">
+                    <div class="type-btn active" id="btn-auth-login" onclick="switchAuthType('login')">Login</div>
+                    <div class="type-btn" id="btn-auth-signup" onclick="switchAuthType('signup')">Sign Up</div>
+                </div>
+                <div id="auth-form-login">
+                    <div class="input-group"><label class="input-label">Username</label><input type="text" class="form-input" id="logUser" placeholder="Enter your username"></div>
+                    <div class="input-group"><label class="input-label">Password</label><input type="password" class="form-input" id="logPass" placeholder="Enter your password"></div>
+                    <button class="modal-btn" id="btn-login-submit" onclick="handleLogin()">Sign In</button>
+                    <div style="text-align: center; margin-top: 16px;"><a href="javascript:void(0)" style="color: var(--accent-purple); font-size: 13px; font-weight: 600; text-decoration: none;" onclick="switchAuthType('forgot')">Forgot Password?</a></div>
+                </div>
+                <div id="auth-form-signup" style="display: none;">
+                    <div class="input-group"><label class="input-label">First Name *</label><input type="text" class="form-input" id="signFirst" placeholder="First Name"></div>
+                    <div class="input-group"><label class="input-label">Middle Name (Optional)</label><input type="text" class="form-input" id="signMiddle" placeholder="Middle Name"></div>
+                    <div class="input-group"><label class="input-label">Last Name *</label><input type="text" class="form-input" id="signLast" placeholder="Last Name"></div>
+                    <div class="input-group">
+                        <label class="input-label">Gender *</label>
+                        <div class="custom-select" id="genderDropdown" style="width: 100%;">
+                            <input type="hidden" id="signGender" value="">
+                            <div class="select-trigger" onclick="toggleDropdown('genderDropdown')"><span id="lbl_signGender">Select Gender</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                            <div class="select-options">
+                                <div class="select-option" onclick="updateCustomDD(this, 'signGender', 'lbl_signGender', 'Male')">Male</div>
+                                <div class="select-option" onclick="updateCustomDD(this, 'signGender', 'lbl_signGender', 'Female')">Female</div>
+                                <div class="select-option" onclick="updateCustomDD(this, 'signGender', 'lbl_signGender', 'Other')">Other</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Date of Birth *</label>
+                        <div class="date-picker-row">
+                            <div class="custom-select" id="dobDayDropdown"><input type="hidden" id="signDobDay" value=""><div class="select-trigger" onclick="toggleDropdown('dobDayDropdown')"><span id="lbl_signDobDay">DD</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div><div class="select-options" id="dobDayOptions" style="max-height: 180px;"></div></div>
+                            <div class="custom-select" id="dobMonthDropdown"><input type="hidden" id="signDobMonth" value=""><div class="select-trigger" onclick="toggleDropdown('dobMonthDropdown')"><span id="lbl_signDobMonth">MM</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div><div class="select-options" id="dobMonthOptions" style="max-height: 180px;"></div></div>
+                            <div class="custom-select" id="dobYearDropdown"><input type="hidden" id="signDobYear" value=""><div class="select-trigger" onclick="toggleDropdown('dobYearDropdown')"><span id="lbl_signDobYear">YYYY</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div><div class="select-options" id="dobYearOptions" style="max-height: 180px;"></div></div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: var(--border-color); margin: 24px 0;"></div>
+                    <div class="input-group"><label class="input-label">Choose Username *</label><input type="text" class="form-input" id="signUser" placeholder="e.g. ShyamBodhak"></div>
+                    <div class="input-group"><label class="input-label">Create Password *</label><input type="password" class="form-input" id="signPass" placeholder="Make it safe"></div>
+                    <button class="modal-btn" id="btn-signup-submit" onclick="handleSignup()">Register Account</button>
+                </div>
+                <div id="auth-form-forgot" style="display: none;">
+                    <div class="input-group"><label class="input-label">Recovery Token String</label><input type="text" class="form-input" id="forgotToken" placeholder="PASTE_TOKEN_HERE"></div>
+                    <div class="input-group" id="forgotNewPassGroup" style="display: none;"><label class="input-label">Create New Password</label><input type="password" class="form-input" id="forgotNewPass" placeholder="Enter new password"></div>
+                    <button class="modal-btn" id="btnForgotAction" onclick="handleVerifyToken()">Verify String Token</button>
+                    <div style="text-align: center; margin-top: 16px;"><a href="javascript:void(0)" style="color: var(--text-secondary); font-size: 13px; font-weight: 600; text-decoration: none;" onclick="switchAuthType('login')">Return to Login</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="customAlertModal">
+        <div class="system-modal-box">
+            <div class="sys-modal-title">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span id="ca_title">Notice</span>
+            </div>
+            <div class="sys-modal-msg" id="ca_msg">Message here.</div>
+            <div class="sys-modal-actions">
+                <button class="sys-btn sys-btn-primary" onclick="closeCustomAlert()">Okay</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-canvas-container" style="display: none;">
+        <canvas id="tokenCanvas" width="600" height="300"></canvas>
+    </div>
+
+    <div id="toast">Message</div>
+
+    <script>
+        // =========================================================================
+        // ⚙️ GITHUB REPOSITORY AUTHENTICATION DETAILS
+        // =========================================================================
+        const GITHUB_OWNER = "SKBodhak";            
+        const GITHUB_REPO = "promptaster";          
+        const GITHUB_BRANCH = "main";              
+        
+        // Split Token required strictly for creating accounts and updating users.json/create.json
+        const TOKEN_P1 = "github_pat_11A3JHEY"; 
+        const TOKEN_P2 = "A0OGs2LKDKRf2X_f1Nkb";
+        const TOKEN_P3 = "oezoawdMTo5iM6z1AUEh";
+        const TOKEN_P4 = "GlvR2M3jqwaiJfcAZBYCAKX3NRVXs9Bepa";
+        const FULL_TOKEN = TOKEN_P1 + TOKEN_P2 + TOKEN_P3 + TOKEN_P4;
+        // =========================================================================
+
+        // The session state. NOT saved to localStorage.
+        let currentActiveUser = sessionStorage.getItem('pn_session_user') || null;
+        let verifiedRecoveryUser = null;
+
+        // --- GLOBAL TOAST CONFIG ---
+        window.toastConfig = { copied: "Copied!", saved: "Saved!", removed: "Removed!", created: "Created!", sent: "Sent!" };
+        let autoCopyEnabled = false;
+        let hapticsEnabled = true;
+
+        /* =====================================================================
+           ASYNC GITHUB CONFIGURATION LOADER
+           ===================================================================== */
+        async function fetchFromGitHub(filename) {
+            const cb = new Date().getTime(); 
+            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}?ref=${GITHUB_BRANCH}&t=${cb}`;
+            const headers = { "Accept": "application/vnd.github.v3+json" };
+            if (FULL_TOKEN.length > 10) headers["Authorization"] = `Bearer ${FULL_TOKEN}`;
+
+            const res = await fetch(url, { headers });
+            if(!res.ok) throw new Error(`Failed to fetch ${filename}`);
+            const data = await res.json();
+            return { json: JSON.parse(decodeURIComponent(escape(atob(data.content)))), sha: data.sha };
+        }
+
+        async function writeToGitHub(filename, contentObj, existingSha = null) {
+            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}`;
+            const headers = { "Authorization": `Bearer ${FULL_TOKEN}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" };
+            
+            let sha = existingSha;
+            if(!sha) {
+                try {
+                    const getRes = await fetch(url + `?ref=${GITHUB_BRANCH}&t=${new Date().getTime()}`, { headers });
+                    if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+                } catch(e) {}
+            }
+
+            const body = { 
+                message: `Update: ${filename}`, 
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(contentObj, null, 2)))), 
+                branch: GITHUB_BRANCH 
+            };
+            if(sha) body.sha = sha;
+
+            const putRes = await fetch(url, { method: "PUT", headers, body: JSON.stringify(body) });
+            if(!putRes.ok) throw new Error(`Write failed for ${filename}`);
+        }
+
+        async function loadGithubConfigs() {
+            try {
+                if(!GITHUB_OWNER || GITHUB_OWNER === "YourUsernameHere") {
+                    throw new Error("GitHub Repo not configured in index.html");
+                }
+                
+                populateDateDropdowns();
+
+                const [site, system, settings, data] = await Promise.all([
+                    fetchFromGitHub('site.json'), fetchFromGitHub('system.json'), fetchFromGitHub('settings.json'), fetchFromGitHub('data.json')
+                ]);
+
+                initializeAppFromJSON({ site: site.json, system: system.json, settings: settings.json, data: data.json });
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loadingState').innerHTML = `
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-danger)" stroke-width="1.5" style="margin-bottom: 16px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <h3 style="color: var(--text-primary);">Data Connection Error</h3>
+                    <p style="margin-top: 8px; font-size: 14px;">Could not load JSON files from GitHub. Please make sure the JSON files exist in your repository.</p>
+                `;
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+
+        function populateDateDropdowns() {
+            // Days
+            let daysHtml = ''; for(let i=1; i<=31; i++) daysHtml += `<div class="select-option" onclick="updateCustomDD(this, 'signDobDay', 'lbl_signDobDay', '${i}')">${i}</div>`;
+            document.getElementById('dobDayOptions').innerHTML = daysHtml;
+            // Months
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            let monthsHtml = ''; months.forEach((m,i) => monthsHtml += `<div class="select-option" onclick="updateCustomDD(this, 'signDobMonth', 'lbl_signDobMonth', '${i+1}')">${m}</div>`);
+            document.getElementById('dobMonthOptions').innerHTML = monthsHtml;
+            // Years
+            const currentYear = new Date().getFullYear();
+            let yearsHtml = ''; for(let i=currentYear; i>=1940; i--) yearsHtml += `<div class="select-option" onclick="updateCustomDD(this, 'signDobYear', 'lbl_signDobYear', '${i}')">${i}</div>`;
+            document.getElementById('dobYearOptions').innerHTML = yearsHtml;
+        }
+
+        function initializeAppFromJSON(config) {
+            
+            // SITE JSON
+            document.getElementById('pageTitle').innerText = config.site.pageTitle || "PromptNova";
+            const logoHTML = `${config.site.namePart1 || "Prompt"}<span>${config.site.namePart2 || "Nova"}</span>`;
+            document.getElementById('menuLogoText').innerHTML = logoHTML;
+            document.getElementById('headerLogoText').innerHTML = logoHTML;
+            if(config.site.accentColor) document.documentElement.style.setProperty('--accent-purple', config.site.accentColor);
+            
+            if(config.site.defaultTheme === 'light') { document.body.classList.add('light-theme'); document.getElementById('themeToggle').checked = true; }
+            setView(config.site.defaultView || 'grid');
+
+            // SYSTEM JSON
+            const sys = config.system || {};
+            if(sys.features) {
+                document.getElementById('btnSettingsMenu').classList.toggle('hidden-by-config', !sys.features.showSettings);
+                document.getElementById('btnLegalMenu').classList.toggle('hidden-by-config', !sys.features.showLegal);
+                document.getElementById('btnDevMenu').classList.toggle('hidden-by-config', !sys.features.showDevProfile);
+            }
+            if(sys.menuText) {
+                document.getElementById('txtSettingsMenu').innerText = sys.menuText.settings || "Settings";
+                document.getElementById('txtLegalMenu').innerText = sys.menuText.legal || "Legal";
+                document.getElementById('txtDevMenu').innerText = sys.menuText.developer || "Developer";
+                
+                // Set Footer Logic
+                if(sys.menuText.footerHtml) {
+                    document.getElementById('menuFooterInject').innerHTML = sys.menuText.footerHtml;
+                } else {
+                    document.getElementById('menuFooterInject').innerHTML = 'Made with <span style="color: var(--accent-danger);">❤️</span> by SKBodhak';
+                }
+            }
+            if(sys.bottomNavText) {
+                document.getElementById('navTxtHome').innerText = sys.bottomNavText.home || "Home";
+                document.getElementById('navTxtCreate').innerText = sys.bottomNavText.create || "Create";
+                document.getElementById('navTxtLib').innerText = sys.bottomNavText.library || "Library";
+            }
+            if(sys.toasts) window.toastConfig = sys.toasts;
+
+            // Render custom admin-configured contact links directly
+            if(sys.contactButtons) {
+                const cGrid = document.getElementById('injectAdminChatGrid');
+                cGrid.innerHTML = '';
+                sys.contactButtons.forEach(b => {
+                    cGrid.innerHTML += `<a href="${b.url}" target="_blank" class="admin-dm-badge">${b.iconSvg || ''}<span>${b.text}</span></a>`;
+                });
+            }
+
+            renderNotifications(sys);
+            renderPopups(sys);
+
+            // SETTINGS JSON
+            if(config.settings) {
+                if(config.settings.legal) {
+                    document.getElementById('tosTitle').innerText = config.settings.legal.tosTitle || "Terms";
+                    document.getElementById('tosText').innerText = config.settings.legal.tosText || "N/A";
+                    document.getElementById('privacyTitle').innerText = config.settings.legal.privacyTitle || "Privacy";
+                    document.getElementById('privacyText').innerText = config.settings.legal.privacyText || "N/A";
+                }
+                if(config.settings.developer) renderDevProfile(config.settings.developer);
+            }
+
+            // DATA JSON
+            if(config.data && config.data.prompts) renderGallery(config.data.prompts);
+
+            // Fetch stored session
+            checkAuthStatus();
+        }
+
+        // --- AUTH LOGIC (LIVE WRITING TO GITHUB USERS.JSON) ---
+        function checkAuthStatus() {
+            const current = currentActiveUser;
+            const btnDesk = document.getElementById('navAuthBtn');
+            
+            if(current) {
+                document.body.classList.remove('logged-out');
+                btnDesk.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>${current} (Logout)</span>
+                `;
+                btnDesk.onclick = handleLogout;
+            } else {
+                document.body.classList.add('logged-out');
+                btnDesk.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                    <span>Login</span>
+                `;
+                btnDesk.onclick = () => openModal('authModal');
+            }
+        }
+
+        function requireAuth(event = null) {
+            if (!currentActiveUser) {
+                if(event) { event.preventDefault(); event.stopPropagation(); }
+                customAlert("You must be logged in to copy, like, or create prompts.<br><br>The vault is currently locked.", "Authentication Required");
+                openModal('authModal');
+                return false;
+            }
+            return true;
+        }
+
+        function handleProtectedAction(modalId) {
+            if(requireAuth()) openModal(modalId);
+        }
+
+        function switchAuthType(type) {
+            document.getElementById('authTitle').innerText = type === 'login' ? 'Login' : (type === 'signup' ? 'Sign Up' : 'Recovery');
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            if(document.getElementById(`btn-auth-${type}`)) { document.getElementById(`btn-auth-${type}`).classList.add('active'); }
+
+            document.getElementById('auth-form-login').style.display = type === 'login' ? 'block' : 'none';
+            document.getElementById('auth-form-signup').style.display = type === 'signup' ? 'block' : 'none';
+            document.getElementById('auth-form-forgot').style.display = type === 'forgot' ? 'block' : 'none';
+            
+            document.getElementById('forgotNewPassGroup').style.display = 'none';
+            document.getElementById('btnForgotAction').innerText = "Verify String Token";
+            document.getElementById('btnForgotAction').onclick = handleVerifyToken;
+            triggerHaptic();
+        }
+
+        async function handleSignup() {
+            const first = document.getElementById('signFirst').value.trim();
+            const middle = document.getElementById('signMiddle').value.trim();
+            const last = document.getElementById('signLast').value.trim();
+            const gender = document.getElementById('signGender').value.trim();
+            
+            const dobDay = document.getElementById('signDobDay').value;
+            const dobMonth = document.getElementById('signDobMonth').value;
+            const dobYear = document.getElementById('signDobYear').value;
+            
+            const user = document.getElementById('signUser').value.trim();
+            const pass = document.getElementById('signPass').value.trim();
+
+            if(!first || !last || !gender || !dobDay || !dobMonth || !dobYear || !user || !pass) { 
+                triggerToast("All required (*) fields must be filled!"); 
+                return; 
+            }
+            
+            const dob = `${dobYear}-${dobMonth}-${dobDay}`;
+
+            const btn = document.getElementById('btn-signup-submit');
+            const originalText = btn.innerText;
+            btn.innerText = "Registering on Server...";
+            btn.disabled = true;
+
+            try {
+                let usersObj = {};
+                let fileSha = null;
+                try {
+                    const res = await fetchFromGitHub('users.json');
+                    usersObj = res.json; fileSha = res.sha;
+                } catch(e) { console.log("Creating new users list file."); }
+
+                if(usersObj[user]) {
+                    btn.innerText = originalText; btn.disabled = false;
+                    customAlert("This username is already registered.", "Registration Blocked");
+                    return;
+                }
+
+                const token = "NOVA-TOKEN-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+                usersObj[user] = { 
+                    firstName: first, middleName: middle, lastName: last, gender: gender,
+                    dob: dob, password: pass, token: token, registeredAt: new Date().toISOString()
+                };
+
+                // PUSH TO GITHUB
+                await writeToGitHub('users.json', usersObj, fileSha);
+                
+                // GENERATE IMAGE & ACTIVATE SESSION (Stored strictly in RAM/Session)
+                generateTokenImage(user, token);
+                closeModal('authModal');
+                currentActiveUser = user;
+                sessionStorage.setItem('pn_session_user', user);
+                checkAuthStatus();
+                
+                customAlert(`Account created! Your recovery token image has been downloaded.<br><br>Token String:<br><b>${token}</b><br><br>Keep it safe!`, "Registration Successful");
+            } catch(e) {
+                customAlert("Failed to update users on GitHub: " + e.message);
+            }
+            btn.innerText = originalText; btn.disabled = false;
+        }
+
+        async function handleLogin() {
+            const user = document.getElementById('logUser').value.trim();
+            const pass = document.getElementById('logPass').value.trim();
+            if(!user || !pass) { triggerToast("Fields cannot be blank!"); return; }
+
+            const btn = document.getElementById('btn-login-submit');
+            const originalText = btn.innerText;
+            btn.innerText = "Authenticating..."; btn.disabled = true;
+
+            try {
+                const res = await fetchFromGitHub('users.json');
+                const users = res.json;
+                if(users[user] && users[user].password === pass) {
+                    currentActiveUser = user;
+                    sessionStorage.setItem('pn_session_user', user);
+                    closeModal('authModal');
+                    checkAuthStatus();
+                    triggerToast("Logged in successfully!");
+                } else {
+                    triggerToast("Wrong username or password!");
+                }
+            } catch(e) { triggerToast("Login Error: users.json file missing."); }
+            btn.innerText = originalText; btn.disabled = false;
+        }
+
+        function handleLogout() {
+            currentActiveUser = null;
+            sessionStorage.removeItem('pn_session_user');
+            checkAuthStatus();
+            triggerToast("Logged out safely.");
+        }
+
+        async function handleVerifyToken() {
+            const tokenInput = document.getElementById('forgotToken').value.trim();
+            if(!tokenInput) { triggerToast("Paste a token string!"); return; }
+
+            const btn = document.getElementById('btnForgotAction');
+            const originalText = btn.innerText;
+            btn.innerText = "Verifying..."; btn.disabled = true;
+
+            try {
+                const res = await fetchFromGitHub('users.json');
+                const users = res.json;
+                let foundUser = null;
+                for(let u in users) {
+                    if(users[u].token === tokenInput) { foundUser = u; break; }
+                }
+
+                if(foundUser) {
+                    verifiedRecoveryUser = foundUser;
+                    document.getElementById('forgotNewPassGroup').style.display = 'block';
+                    btn.innerText = "Change Password";
+                    btn.onclick = handleResetPassword;
+                    btn.disabled = false;
+                    triggerToast("Token verified! Type your new password.");
+                } else {
+                    triggerToast("Token not found inside database!");
+                    btn.innerText = originalText; btn.disabled = false;
+                }
+            } catch(e) { triggerToast("Error accessing storage."); btn.innerText = originalText; btn.disabled = false; }
+        }
+
+        async function handleResetPassword() {
+            const newPass = document.getElementById('forgotNewPass').value.trim();
+            if(!newPass) { triggerToast("Password box empty!"); return; }
+
+            const btn = document.getElementById('btnForgotAction');
+            btn.innerText = "Updating..."; btn.disabled = true;
+
+            try {
+                const res = await fetchFromGitHub('users.json');
+                const users = res.json;
+                if(users[verifiedRecoveryUser]) {
+                    users[verifiedRecoveryUser].password = newPass;
+                    await writeToGitHub('users.json', users, res.sha);
+                }
+                closeModal('authModal');
+                switchAuthType('login');
+                customAlert("Your password has been changed in users.json. You can log in now.");
+            } catch(e) {
+                triggerToast("Reset processing failed.");
+            }
+            btn.disabled = false;
+        }
+
+        function generateTokenImage(username, token) {
+            const canvas = document.getElementById('tokenCanvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0E0E11'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#818CF8'; ctx.lineWidth = 4; ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+            ctx.fillStyle = '#FAFAFA'; ctx.font = 'bold 32px Inter, sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('PromptNova Recovery Token', canvas.width / 2, 70);
+
+            ctx.fillStyle = '#F43F5E'; ctx.font = '600 16px Inter, sans-serif';
+            ctx.fillText('DO NOT LOSE THIS IMAGE. KEEP IT SAFE.', canvas.width / 2, 110);
+
+            ctx.fillStyle = '#16161A'; ctx.fillRect(50, 140, 500, 100);
+            ctx.strokeStyle = '#27272A'; ctx.lineWidth = 2; ctx.strokeRect(50, 140, 500, 100);
+
+            ctx.fillStyle = '#A1A1AA'; ctx.font = '500 20px Inter, sans-serif'; ctx.textAlign = 'left';
+            ctx.fillText('Username:', 80, 180); ctx.fillText('Token ID:', 80, 220);
+
+            ctx.fillStyle = '#FAFAFA'; ctx.font = 'bold 22px monospace'; ctx.fillText(username, 220, 180);
+            ctx.fillStyle = '#818CF8'; ctx.fillText(token, 220, 220);
+
+            const link = document.createElement('a');
+            link.download = `PromptNova_Token_${username}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // --- DYNAMIC RENDERING FUNCTIONS ---
+        function renderDevProfile(dev) {
+            const avatarEl = document.getElementById('devAvatarEl');
+            if(dev.avatarType === 'image' && dev.avatarImgUrl) avatarEl.innerHTML = `<img src="${dev.avatarImgUrl}">`;
+            else avatarEl.innerHTML = `<span>${dev.avatarText || "Dev"}</span>`;
+            
+            document.getElementById('devBadgeEl').innerText = dev.badge || "Dev";
+            document.getElementById('devNameEl').innerText = dev.name || "Anonymous";
+            document.getElementById('devHandleEl').innerText = dev.handle || "@handle";
+            
+            if(dev.showQuote && dev.quote) { document.getElementById('devQuoteContainer').style.display = 'block'; document.getElementById('devQuoteEl').innerHTML = dev.quote; } 
+            else { document.getElementById('devQuoteContainer').style.display = 'none'; }
+
+            document.getElementById('devSkillsEl').innerHTML = (dev.skills || []).map(s => `<span class="minimal-tag">${s}</span>`).join('');
+            document.getElementById('devSocialsEl').innerHTML = (dev.socials || []).map(s => `<a href="${s.url}" target="_blank" class="minimal-social" title="${s.name}">${s.iconSvg}</a>`).join('');
+
+            const btnContainer = document.getElementById('devButtonsInject');
+            btnContainer.innerHTML = '';
+            (dev.buttons || []).forEach(b => {
+                const styleClass = b.style === 'amber' ? 'amber' : (b.style === 'primary' ? 'primary' : 'outline');
+                btnContainer.innerHTML += `<a href="${b.url}" class="dev-btn ${styleClass}" target="_blank">${b.text}</a>`;
+            });
+        }
+
+        function renderNotifications(sys) {
+            const container = document.getElementById('banner-container');
+            container.innerHTML = '';
+            let notifs = sys.notifications || [];
+            if(sys.notifSortOrder === 'newest') notifs = [...notifs].reverse();
+
+            notifs.forEach(n => {
+                if(!n.enabled) return;
+                if(n.frequency === 'once' && localStorage.getItem('pn_notif_closed_' + n.id)) return;
+
+                const wrapper = document.createElement(n.clickableArea && n.actionUrl ? 'a' : 'div');
+                wrapper.className = 'top-banner' + (n.clickableArea ? ' clickable' : '');
+                if(n.clickableArea && n.actionUrl) wrapper.href = n.actionUrl;
+                wrapper.id = 'banner_' + n.id;
+
+                let btnsHtml = '';
+                (n.buttons || []).forEach(b => {
+                    btnsHtml += `<a href="${b.url}" class="btn-banner ${b.style==='primary'?'primary':'outline'}" ${n.clickableArea?'onclick="event.stopPropagation();"':''}>${b.text}</a>`;
+                });
+
+                wrapper.innerHTML = `
+                    <div class="top-banner-content">${n.message}</div>
+                    <div class="top-banner-actions">
+                        ${btnsHtml}
+                        <button class="btn-banner-close" onclick="closeBanner(event, '${n.id}', '${n.frequency}')">✕</button>
+                    </div>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+
+        function closeBanner(event, id, freq) {
+            event.preventDefault(); event.stopPropagation();
+            document.getElementById('banner_' + id).style.display = 'none';
+            if(freq === 'once') localStorage.setItem('pn_notif_closed_' + id, 'true');
+        }
+
+        function renderPopups(sys) {
+            const container = document.getElementById('dynamic-popups-container');
+            container.innerHTML = '';
+            let popups = sys.popups || [];
+            if(sys.popupSortOrder === 'newest') popups = [...popups].reverse();
+
+            popups.forEach(p => {
+                if(!p.enabled) return;
+                if(p.frequency === 'once' && localStorage.getItem('pn_pop_closed_' + p.id)) return;
+
+                const box = document.createElement('div');
+                box.className = 'modal-box dynamic-popup-card';
+                if(p.clickableArea && p.actionUrl) {
+                    box.style.cursor = 'pointer';
+                    box.onclick = (e) => { if(!e.target.closest('.dp-btn, .modal-close')) window.location.href = p.actionUrl; }
+                }
+
+                let btnsHtml = '';
+                (p.buttons || []).forEach(b => {
+                    btnsHtml += `<a href="${b.url}" class="dp-btn ${b.style==='primary'?'primary':'outline'}">${b.text}</a>`;
+                });
+
+                box.innerHTML = `
+                    <button class="modal-close" style="position: absolute; top: 16px; right: 16px;" onclick="closePopup(event, '${p.id}', '${p.frequency}')">✕</button>
+                    <div class="dp-title">${p.title}</div>
+                    <div class="dp-msg">${p.message}</div>
+                    <div class="dp-btns">${btnsHtml}</div>
+                `;
+                container.appendChild(box);
+                container.classList.add('active'); 
+                
+                history.pushState({modal: 'dynamic-popups-container'}, '', '#popup');
+            });
+        }
+
+        function closePopup(event, id, freq) {
+            event.stopPropagation();
+            const btn = event.target;
+            btn.closest('.dynamic-popup-card').remove();
+            if(freq === 'once') localStorage.setItem('pn_pop_closed_' + id, 'true');
+            
+            if(document.getElementById('dynamic-popups-container').children.length === 0) {
+                document.getElementById('dynamic-popups-container').classList.remove('active');
+                if(window.location.hash === '#popup') history.back();
+            }
+        }
+
+        // --- REAL-TIME LIKES DISPATCHER THROUGH FIREBASE ---
+        function listenToPromptLikes(promptId, countElement, topBtn, bottomBtn) {
+            if(!window.db) return;
+            const totalLikesRef = window.fbRef(window.db, `likes/${promptId}/totalCount`);
+            window.fbOnValue(totalLikesRef, (snapshot) => {
+                const total = snapshot.val() || 0;
+                countElement.innerText = total;
+            });
+
+            if (currentActiveUser) {
+                const uniqueLikeRef = window.fbRef(window.db, `likes/${promptId}/users/${currentActiveUser}`);
+                window.fbOnValue(uniqueLikeRef, (snapshot) => {
+                    const active = !!snapshot.val();
+                    if(active) {
+                        topBtn.classList.add('liked'); bottomBtn.classList.add('liked');
+                        bottomBtn.querySelector('.like-btn-text').innerText = "Liked";
+                    } else {
+                        topBtn.classList.remove('liked'); bottomBtn.classList.remove('liked');
+                        bottomBtn.querySelector('.like-btn-text').innerText = "Like";
+                    }
+                });
+            }
+        }
+
+        function toggleLike(event, promptId) {
+            if(!requireAuth(event)) return;
+            if(!window.db) return;
+
+            const userRef = window.fbRef(window.db, `likes/${promptId}/users/${currentActiveUser}`);
+            const totalRef = window.fbRef(window.db, `likes/${promptId}/totalCount`);
+
+            window.fbRunTransaction(userRef, (currentStatus) => {
+                const isLiked = !!currentStatus;
+                
+                // Update total counter concurrently
+                window.fbRunTransaction(totalRef, (currentCount) => {
+                    let total = currentCount || 0;
+                    return isLiked ? Math.max(0, total - 1) : total + 1;
+                });
+
+                triggerToast(!isLiked ? window.toastConfig.saved : window.toastConfig.removed);
+                triggerHaptic();
+                return isLiked ? null : true;
+            });
+        }
+
+        function renderGallery(prompts) {
+            window.globalPromptsCached = prompts;
+            const container = document.getElementById('gallery-container');
+            document.querySelectorAll('.card').forEach(c => c.remove());
+
+            prompts.forEach(p => {
+                const imageArray = p.images ? p.images : (p.imgUrl ? [p.imgUrl] : []);
+                let slidesHTML = ''; let indicatorsHTML = '';
+                
+                imageArray.forEach((url, index) => {
+                    slidesHTML += `<img src="${url}" class="carousel-slide" loading="lazy">`;
+                    if (imageArray.length > 1) indicatorsHTML += `<div class="indicator-dot ${index === 0 ? 'active' : ''}"></div>`;
+                });
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.setAttribute('data-id', p.id);
+                card.setAttribute('data-category', p.category || 'all');
+                
+                card.innerHTML = `
+                    <div class="carousel-wrapper">
+                        <div class="carousel-track" onscroll="handleCarouselScroll(this)">${slidesHTML}</div>
+                        <div class="carousel-indicators">${indicatorsHTML}</div>
+                        <div class="data-saver-badge">Data Saver Mode</div>
+                        <div class="card-top-actions">
+                            <button class="icon-btn btn-top-like" onclick="toggleLike(event, '${p.id}')">
+                                <span class="like-count">${p.likes || '0'}</span>
+                                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="prompt-box-wrapper">
+                            <div class="prompt-box" id="${p.id}">${p.text}</div>
+                            <div class="locked-msg">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> 
+                                Login to Unlock
+                            </div>
+                        </div>
+                        
+                        <div class="card-actions">
+                            <button class="btn-action btn-copy" onclick="copyPrompt(event, '${p.id}')">
+                                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 
+                                <span>Copy</span>
+                            </button>
+                            <button class="btn-action btn-like btn-bottom-like" onclick="toggleLike(event, '${p.id}')">
+                                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                <span class="like-btn-text">Like</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                // Attach real-time listener if Firebase is configured
+                listenToPromptLikes(p.id, card.querySelector('.like-count'), card.querySelector('.btn-top-like'), card.querySelector('.btn-bottom-like'));
+            });
+        }
+
+        function handleCarouselScroll(trackEl) {
+            const wrapper = trackEl.closest('.carousel-wrapper');
+            const indicators = wrapper.querySelectorAll('.indicator-dot');
+            if(indicators.length === 0) return;
+            const slideWidth = trackEl.clientWidth;
+            const activeIndex = Math.round(trackEl.scrollLeft / slideWidth);
+            indicators.forEach((dot, index) => {
+                if(index === activeIndex) dot.classList.add('active'); else dot.classList.remove('active');
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadGithubConfigs);
+
+        /* --- UI Logic & Routing --- */
+        window.addEventListener('popstate', (e) => {
+            const hash = window.location.hash;
+            
+            // 1. Hide all modals
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+            
+            // 2. Handle Menu state
+            if (hash === '#menu') {
+                document.getElementById('sideMenu').classList.add('active');
+                document.getElementById('menuOverlay').classList.add('active');
+            } else {
+                document.getElementById('sideMenu').classList.remove('active');
+                document.getElementById('menuOverlay').classList.remove('active');
+            }
+
+            // 3. Handle Modal state (if any other modal is in hash)
+            if (hash && hash !== '#menu' && hash !== '#popup') {
+                const modalId = hash.substring(1);
+                const targetModal = document.getElementById(modalId);
+                if (targetModal && targetModal.classList.contains('modal-overlay')) {
+                    targetModal.classList.add('active');
+                }
+            } else if (hash === '#popup') {
+                document.getElementById('dynamic-popups-container').classList.add('active');
+            }
+        });
+
+        function openMenu() { document.getElementById('sideMenu').classList.add('active'); document.getElementById('menuOverlay').classList.add('active'); history.pushState({view: 'menu'}, '', '#menu'); triggerHaptic(); }
+        function closeMenu() { document.getElementById('sideMenu').classList.remove('active'); document.getElementById('menuOverlay').classList.remove('active'); if(window.location.hash === '#menu') history.back(); }
+        
+        function openSubModal(id) { document.getElementById(id).classList.add('active'); history.pushState({view: id}, '', `#${id}`); triggerHaptic(); }
+        function closeSubModal(id) { document.getElementById(id).classList.remove('active'); if(window.location.hash === `#${id}`) history.back(); }
+        
+        function openModal(id) { document.getElementById(id).classList.add('active'); history.pushState({view: id}, '', `#${id}`); triggerHaptic(); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); if(window.location.hash === `#${id}`) history.back(); }
+        
+        function customAlert(message, title="Notice") {
+            document.getElementById('ca_title').innerHTML = title;
+            document.getElementById('ca_msg').innerHTML = message;
+            document.getElementById('customAlertModal').classList.add('active');
+        }
+        function closeCustomAlert() { document.getElementById('customAlertModal').classList.remove('active'); }
+
+        function toggleDropdown(id) { document.getElementById(id).classList.toggle('active'); }
+        function selectFilter(element, val, label) {
+            currentFilter = val;
+            document.getElementById('dropdown-label').innerText = label;
+            document.querySelectorAll('#categoryDropdown .select-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('categoryDropdown').classList.remove('active');
+            filterCards();
+        }
+        function updateCustomDD(optionElement, inputId, labelId, value) {
+            document.getElementById(inputId).value = value;
+            document.getElementById(labelId).innerText = optionElement.innerText;
+            optionElement.closest('.custom-select').classList.remove('active');
+            optionElement.parentElement.querySelectorAll('.select-option').forEach(el => el.classList.remove('selected'));
+            optionElement.classList.add('selected');
+        }
+        window.addEventListener('click', function(e) { if(!e.target.closest('.custom-select')) { document.querySelectorAll('.custom-select').forEach(d => d.classList.remove('active')); } });
+
+        let currentFilter = 'all'; let showOnlyLiked = false;
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'flex' : 'none';
+            filterCards();
+        }
+        function clearSearch() { document.getElementById('searchInput').value = ''; document.getElementById('clearSearchBtn').style.display = 'none'; filterCards(); }
+        
+        function setView(v) { 
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active')); 
+            if(document.getElementById('btn-'+v)) document.getElementById('btn-'+v).classList.add('active'); 
+            document.getElementById('gallery-container').className = `gallery ${v}-view`; 
+            triggerHaptic();
+        }
+
+        function switchMainView(v) { 
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active')); 
+            document.getElementById(v==='home'?'navHome':'navLib').classList.add('active'); 
+            document.getElementById('sectionTitle').style.display = v==='home'?'none':'block'; 
+            showOnlyLiked = v!=='home'; 
+            filterCards(); triggerHaptic();
+        }
+
+        function filterCards() { 
+            const q = document.getElementById('searchInput').value.toLowerCase(); 
+            let visible = 0;
+            document.querySelectorAll('.card').forEach(c => { 
+                const promptBox = c.querySelector('.prompt-box');
+                const t = promptBox ? promptBox.innerText.toLowerCase() : ""; 
+                const isLiked = c.classList.contains('liked-card'); 
+                const category = c.getAttribute('data-category') || 'all';
+                
+                const matchesText = t.includes(q);
+                const matchesFilter = (currentFilter === 'all' || category === currentFilter);
+                const matchesTab = (!showOnlyLiked || isLiked);
+
+                if(matchesText && matchesFilter && matchesTab) { c.style.display=''; visible++; } 
+                else { c.style.display='none'; }
+            }); 
+            document.getElementById('emptyState').style.display = (visible === 0) ? 'block' : 'none';
+        }
+
+        let tTOut; 
+        function triggerToast(m) { 
+            if(!m) return;
+            const t = document.getElementById("toast"); t.innerHTML = m; t.classList.add("show"); 
+            clearTimeout(tTOut); tTOut = setTimeout(() => t.classList.remove("show"), 2500); 
+        }
+
+        function copyPrompt(event, id) { 
+            if(!requireAuth(event)) return;
+
+            navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
+                triggerToast(window.toastConfig.copied); triggerHaptic();
+            }); 
+        }
+
+        // --- SUBMIT / CREATE PROMPT LOGIC ---
+        async function submitPrompt() {
+            if(!currentActiveUser) return; // Secured by handleProtectedAction already
+
+            const url = document.getElementById('newImgUrl').value || 'https://picsum.photos/seed/' + Math.random() + '/800/600';
+            const category = document.getElementById('newCategory').value;
+            const text = document.getElementById('newPromptText').value;
+
+            if(!text) { customAlert("Please enter a prompt formula!", "Missing Input"); return; }
+
+            const btn = document.querySelector('#form-public .modal-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Submitting for approval...";
+            btn.disabled = true;
+
+            const newId = 'pending_' + Math.floor(Math.random() * 100000);
+            const newPrompt = {
+                id: newId,
+                category: category,
+                images: [url],
+                likes: "0",
+                text: text,
+                author: currentActiveUser,
+                submittedAt: new Date().toISOString()
+            };
+
+            try {
+                let createObj = { prompts: [] };
+                let fileSha = null;
+                try {
+                    const res = await fetchFromGitHub('create.json');
+                    createObj = res.json;
+                    fileSha = res.sha;
+                    if(!createObj.prompts) createObj.prompts = [];
+                } catch(e) {
+                    console.log("create.json not found on GitHub. Creating a new one.");
+                }
+
+                createObj.prompts.unshift(newPrompt);
+                await writeToGitHub('create.json', createObj, fileSha);
+
+                closeModal('submitModal');
+                document.getElementById('newPromptText').value = '';
+                document.getElementById('newImgUrl').value = '';
+                
+                customAlert("Your prompt has been successfully submitted to the server! It will appear in the library once an admin approves it.", "Submission Successful");
+                
+            } catch(e) {
+                customAlert("Failed to submit prompt to the server: " + e.message, "Network Error");
+            }
+
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+
+        // --- SETTINGS LOGIC ---
+        function navSettings(viewId) { document.querySelectorAll('.settings-view').forEach(v => v.classList.remove('active')); document.getElementById(viewId).classList.add('active'); triggerHaptic(); }
+        function toggleTheme() { document.body.classList.toggle('light-theme'); triggerHaptic(); }
+        function toggleDataSaver() { document.body.classList.toggle('data-saver'); triggerHaptic(); }
+        function toggleAutoCopy() { autoCopyEnabled = document.getElementById('autoCopyToggle').checked; triggerHaptic(); }
+        function toggleHaptics(checkbox) { hapticsEnabled = checkbox.checked; triggerHaptic(); }
+        function triggerHaptic() { if(hapticsEnabled && navigator.vibrate) navigator.vibrate(40); }
+
+        // Global card click interceptor
+        document.getElementById('gallery-container').addEventListener('click', function(e) {
+            if(!currentActiveUser) {
+                // If they click anywhere near the prompt while logged out, show auth
+                if(e.target.closest('.prompt-box-wrapper') || e.target.closest('.card-body')) {
+                    requireAuth(e);
+                }
+                return;
+            }
+
+            if(autoCopyEnabled && e.target.closest('.prompt-box')) copyPrompt(e, e.target.closest('.prompt-box').id);
+        });
+
+    </script>
+</body>
+</html>
