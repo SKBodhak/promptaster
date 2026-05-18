@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PromptNova | Master Admin</title>
+    <title>PromptNova | Secure Master Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script type="module">
@@ -42,9 +42,12 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent;}
-        body { background-color: var(--bg-main); color: var(--text-primary); font-family: var(--font-main); display: flex; height: 100vh; overflow: hidden; position: relative;}
+        body { background-color: var(--bg-main); color: var(--text-primary); font-family: var(--font-main); height: 100vh; overflow: hidden; position: relative;}
 
         select { display: none !important; }
+
+        /* Secure App Wrapper */
+        #appContent { display: none; width: 100%; height: 100%; flex-direction: row; }
 
         /* Desktop Sidebar */
         .sidebar { width: 280px; background: var(--bg-surface); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; transition: 0.3s; flex-shrink: 0;}
@@ -169,13 +172,16 @@
         .modal-footer { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background: var(--bg-input); border-radius: 0 0 20px 20px;}
         .btn-modal-save { background: var(--accent-purple); color: #fff; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 14px;}
 
-        /* HIGHER Z-INDEX FOR ALERTS & PREVIEWS */
-        #customAlertModal { z-index: 5000 !important; }
-        #customConfirmModal { z-index: 5000 !important; }
-        #previewPopupModal { z-index: 4500 !important; }
-        #previewBanner { z-index: 4500 !important; position: fixed; top: 0; left: 0; width: 100%; background: var(--accent-purple); color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; transform: translateY(-100%); transition: 0.3s; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);}
+        /* FIXED Z-INDEXES SO MESSAGES ALWAYS SHOW ON TOP OF LOGIN */
+        #loaderOverlay { position: fixed; inset: 0; background: rgba(5,5,5,0.9); z-index: 99991; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; opacity: 0; pointer-events: none; transition: 0.3s;}
+        #loaderOverlay.active { opacity: 1; pointer-events: all;}
+        
+        #customAlertModal { z-index: 99995 !important; }
+        #customConfirmModal { z-index: 99995 !important; }
+        #previewPopupModal { z-index: 99992 !important; }
+        #previewBanner { z-index: 99992 !important; position: fixed; top: 0; left: 0; width: 100%; background: var(--accent-purple); color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; transform: translateY(-100%); transition: 0.3s; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);}
         #previewBanner.show { transform: translateY(0); }
-        #adminToast { z-index: 6000 !important; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-primary); color: var(--bg-main); padding: 14px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: 0.3s; white-space: nowrap; box-shadow: 0 10px 25px rgba(0,0,0,0.5);}
+        #adminToast { z-index: 99999 !important; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-primary); color: var(--bg-main); padding: 14px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: 0.3s; white-space: nowrap; box-shadow: 0 10px 25px rgba(0,0,0,0.5);}
         #adminToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
         /* CUSTOM INBUILT ALERT & CONFIRM MODALS */
@@ -200,23 +206,57 @@
         .pb-close { background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer; opacity: 0.7;}
         .pb-close:hover { opacity: 1; }
 
-        /* Sync Loader */
-        #loaderOverlay { position: fixed; inset: 0; background: rgba(5,5,5,0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; opacity: 0; pointer-events: none; transition: 0.3s;}
-        #loaderOverlay.active { opacity: 1; pointer-events: all;}
         .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-purple); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Admin Login Screen */
-        #adminLoginScreen { position: fixed; inset: 0; background: var(--bg-main); z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: 0.5s; opacity: 1; }
-        #adminLoginScreen.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
-        .login-card { background: var(--bg-surface); padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; }
+        /* ========================================================
+           ✨ PREMIUM ADMIN LOGIN SCREEN STYLES
+           ======================================================== */
+        #adminLoginScreen { 
+            position: fixed; inset: 0; z-index: 99990; 
+            display: flex; align-items: center; justify-content: center; flex-direction: column; 
+            background: radial-gradient(circle at 15% 50%, rgba(129, 140, 248, 0.15), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.1), transparent 25%),
+                        var(--bg-main);
+            background-size: cover;
+        }
+        .login-card { 
+            background: rgba(14, 14, 17, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02); 
+            width: 100%; max-width: 420px; text-align: center; position: relative; overflow: hidden;
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+            opacity: 0.8;
+        }
+        .login-logo { margin-bottom: 24px; display: inline-flex; padding: 16px; background: rgba(129, 140, 248, 0.1); border-radius: 20px; box-shadow: inset 0 0 20px rgba(129, 140, 248, 0.05); }
+        .login-input { 
+            width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; color: var(--text-primary); font-family: var(--font-main); font-size: 15px; 
+            outline: none; transition: 0.3s; margin-bottom: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .login-input:focus { border-color: var(--accent-purple); background: rgba(0,0,0,0.5); box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15), inset 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-login {
+            background: linear-gradient(135deg, var(--accent-purple), #C084FC); color: #fff; border: none; 
+            width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; 
+            cursor: pointer; transition: 0.3s; box-shadow: 0 8px 25px rgba(129, 140, 248, 0.4); margin-top: 8px; letter-spacing: 0.5px;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(129, 140, 248, 0.6); filter: brightness(1.05); }
+        .btn-login:active { transform: translateY(0); box-shadow: 0 4px 15px rgba(129, 140, 248, 0.4); }
 
         /* Responsive Mobile Layout */
         .mobile-header { display: none; }
         .mobile-nav { display: none; }
 
         @media (max-width: 768px) {
-            body { flex-direction: column; }
+            #appContent { flex-direction: column; }
             .sidebar { display: none; }
             .mobile-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); z-index: 100;}
             .mobile-header .brand { padding: 0; border: none; font-size: 18px; display: flex; gap: 12px; align-items: center; flex-direction: row;}
@@ -250,20 +290,48 @@
             }
             .mobile-nav-btn.active::after { transform: translateX(-50%) scaleX(1); }
             .mobile-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
             .fab-add { bottom: 100px; right: 20px; width: 56px; height: 56px; }
+            
+            .login-card { padding: 40px 24px; margin: 20px; width: auto; }
         }
     </style>
 </head>
 <body>
 
     <div id="adminLoginScreen">
-        <div class="login-card">
-            <h2 style="color: var(--text-primary); margin-bottom: 8px;">Admin Login</h2>
-            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Enter credentials to unlock dashboard.</p>
-            <div class="form-group"><input type="text" id="adminLogUser" placeholder="Admin Username"></div>
-            <div class="form-group"><input type="password" id="adminLogPass" placeholder="Admin Password"></div>
-            <button class="btn-sync" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;" onclick="verifyAdminLogin()">Unlock Panel</button>
+        <div class="login-card" id="adminLoginFormGroup" style="display: none;">
+            <div class="login-logo">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#818CF8" />
+                            <stop offset="100%" stop-color="#C084FC" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h2 style="color: var(--text-primary); margin-bottom: 8px; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Admin Vault</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 32px;">Enter master credentials to securely unlock the dashboard.</p>
+            
+            <input type="text" id="adminLogUser" class="login-input" placeholder="Username" autocomplete="off">
+            <input type="password" id="adminLogPass" class="login-input" placeholder="Password">
+            
+            <button class="btn-login" onclick="verifyAdminLogin()">Unlock Panel</button>
+        </div>
+
+        <div class="login-card" id="missingAdminWarning" style="display: none; border-color: rgba(244, 63, 94, 0.3);">
+            <div class="login-logo" style="background: rgba(244, 63, 94, 0.1); box-shadow: inset 0 0 20px rgba(244, 63, 94, 0.05);">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <h2 style="color: var(--accent-danger); margin-bottom: 8px; font-size: 24px; font-weight: 700;">Security Lock Active</h2>
+            <div style="background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); color: #fda4af; padding: 16px; border-radius: 12px; margin-bottom: 24px; font-size: 13px; text-align: left; line-height: 1.6;">
+                <b>⚠️ Login Blocked:</b> <code>admin_auth.json</code> is missing from GitHub. You cannot log in until the security protocol is initialized.
+            </div>
+            <button class="btn-login" style="background: linear-gradient(135deg, var(--accent-danger), #fda4af); box-shadow: 0 8px 25px rgba(244, 63, 94, 0.4);" onclick="initializeAdminAuth(event)">Initialize Security File</button>
         </div>
     </div>
 
@@ -272,7 +340,266 @@
         <h3 id="loaderText" style="color: #fff; font-weight: 600;">Connecting to GitHub...</h3>
     </div>
 
-    <div class="modal-overlay" id="customAlertModal">
+    <div id="appContent">
+        <div class="mobile-header">
+            <div class="brand">
+                Prompt<span>Nova</span>
+                <div class="status-badge" id="mobStatusBadge"><div class="status-dot"></div><span id="mobStatusTxt">Locked</span></div>
+            </div>
+            <button class="btn-export-mobile btn-sync" id="btnSyncMob" onclick="saveChanges()" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Save
+            </button>
+        </div>
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-top">Prompt<span>Nova</span></div>
+                <div class="status-badge" id="deskStatusBadge"><div class="status-dot"></div><span id="deskStatusTxt">Locked</span></div>
+            </div>
+            <div class="nav-menu" id="desktopNavContainer"></div>
+            <div class="export-section">
+                <button class="btn-export btn-sync" id="btnSyncDesk" onclick="saveChanges()" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save Changes to GitHub
+                </button>
+                <button class="btn-export" style="background:transparent; color:var(--text-secondary); border:1px solid var(--border-color);" onclick="openAdminSettings()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43-.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1-1-1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    Edit Tabs
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content" id="mainContentScroll">
+            
+            <div id="tab-site" class="form-panel active">
+                <div class="section-header"><div><h1>Site Configuration</h1><p>Manage branding, main colors, and layout defaults.</p></div></div>
+                <div class="card">
+                    <div class="card-title">Branding & Colors</div>
+                    <div class="form-group"><label>Page Browser Title</label><input type="text" id="site_pageTitle"></div>
+                    <div class="row-2">
+                        <div class="form-group"><label>Logo Text (Part 1)</label><input type="text" id="site_namePart1"></div>
+                        <div class="form-group"><label>Logo Highlight (Part 2)</label><input type="text" id="site_namePart2"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;"><label>Main Accent Color (Buttons & Highlights)</label><input type="color" id="site_accentColor"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Layout Defaults</div>
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label>Default Theme</label>
+                            <div class="custom-dd" tabindex="0">
+                                <input type="hidden" id="site_defaultTheme">
+                                <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_site_defaultTheme">Select Theme</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                                <div class="dd-options">
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultTheme', 'lbl_site_defaultTheme', 'dark')">Dark Theme</div>
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultTheme', 'lbl_site_defaultTheme', 'light')">Light Theme</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Default Layout View</label>
+                            <div class="custom-dd" tabindex="0">
+                                <input type="hidden" id="site_defaultView">
+                                <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_site_defaultView">Select View</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                                <div class="dd-options">
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'grid')">Grid (Immersive)</div>
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'card')">Cards</div>
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'detail')">Detail List</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-pending" class="form-panel">
+                <div class="section-header">
+                    <div><h1>Pending Approvals</h1><p>Review prompts submitted by users before they go live.</p></div>
+                </div>
+                <div id="pendingContainer"></div>
+            </div>
+
+            <div id="tab-data" class="form-panel">
+                <div class="section-header">
+                    <div><h1>Live Library</h1><p>Manage all active prompts in the database.</p></div>
+                </div>
+                <div id="promptsContainer"></div>
+            </div>
+
+            <div id="tab-users" class="form-panel">
+                <div class="section-header">
+                    <div><h1>User Database</h1><p>Manage all registered accounts securely. Color coded by gender.</p></div>
+                </div>
+                <div id="usersContainer"></div>
+            </div>
+
+            <div id="tab-security" class="form-panel">
+                <div class="section-header">
+                    <div><h1>Security 🛡️</h1><p>Manage the master credentials that secure this admin panel.</p></div>
+                </div>
+                
+                <div class="card" style="border-color: var(--accent-danger); border-width: 2px;">
+                    <div class="card-title" style="color: var(--accent-danger);">Change Admin Credentials</div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Update the master username and password for this admin panel. This gets saved securely to GitHub directly into <code>admin_auth.json</code>.</p>
+                    <div class="row-2">
+                        <div class="form-group"><label>New Username</label><input type="text" id="sec_adminUser" placeholder="Enter new admin username"></div>
+                        <div class="form-group"><label>New Password</label><input type="password" id="sec_adminPass" placeholder="Enter new admin password"></div>
+                    </div>
+                    <button class="btn-sync" style="background: linear-gradient(135deg, var(--accent-danger), #fda4af); width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor:pointer;" onclick="updateAdminCredentials()">Update Security Info</button>
+                </div>
+            </div>
+
+            <div id="tab-system" class="form-panel">
+                <div class="section-header"><div><h1>System & UI Features</h1><p>Turn core features on/off and manage UI links.</p></div></div>
+                
+                <div class="card">
+                    <div class="card-title">Admin Contact Links (Message Page)</div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">These buttons will appear to users in the "Message" tab of the Create menu.</p>
+                    <div id="contactButtonsContainer"></div>
+                    <button class="btn-add-dynamic" onclick="addContactButton()">+ Add Contact Link</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">UI Feature Switches</div>
+                    <div class="toggle-row"><span class="toggle-label">Enable Settings Menu</span><label class="switch"><input type="checkbox" id="sys_feat_settings"><span class="slider"></span></label></div>
+                    <div class="toggle-row"><span class="toggle-label">Enable Legal Menu</span><label class="switch"><input type="checkbox" id="sys_feat_legal"><span class="slider"></span></label></div>
+                    <div class="toggle-row"><span class="toggle-label">Enable Developer Profile</span><label class="switch"><input type="checkbox" id="sys_feat_dev"><span class="slider"></span></label></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Sidebar Menu Text</div>
+                    <div class="row-3">
+                        <div class="form-group"><label>Settings</label><input type="text" id="sys_menu_settings"></div>
+                        <div class="form-group"><label>Legal</label><input type="text" id="sys_menu_legal"></div>
+                        <div class="form-group"><label>Developer</label><input type="text" id="sys_menu_dev"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;"><label>Footer HTML (Made By)</label><textarea id="sys_menu_footer" rows="2"></textarea></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Bottom App Navigation Text</div>
+                    <div class="row-3">
+                        <div class="form-group"><label>Home Tab</label><input type="text" id="sys_nav_home"></div>
+                        <div class="form-group"><label>Create Button</label><input type="text" id="sys_nav_create"></div>
+                        <div class="form-group"><label>Library Tab</label><input type="text" id="sys_nav_lib"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-notif" class="form-panel">
+                <div class="section-header"><div><h1>Top Notifications</h1><p>Manage tiny top banner announcements with cross icons.</p></div></div>
+                <div class="card">
+                    <div class="card-title">Global Settings</div>
+                    <div class="form-group">
+                        <label>Display Order (Main Site)</label>
+                        <div class="custom-dd" tabindex="0">
+                            <input type="hidden" id="sys_notif_sort">
+                            <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_sys_notif_sort">Newest First</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                            <div class="dd-options">
+                                <div class="dd-option" onclick="updateCustomDD(this, 'sys_notif_sort', 'lbl_sys_notif_sort', 'newest')">Newest First</div>
+                                <div class="dd-option" onclick="updateCustomDD(this, 'sys_notif_sort', 'lbl_sys_notif_sort', 'oldest')">Oldest First</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Notification Banners</div>
+                    <div id="notifsContainer"></div>
+                </div>
+            </div>
+
+            <div id="tab-popup" class="form-panel">
+                <div class="section-header"><div><h1>Center Popups</h1><p>Manage modal popup announcements.</p></div></div>
+                <div class="card">
+                    <div class="card-title">Global Settings</div>
+                    <div class="form-group">
+                        <label>Display Order (Main Site)</label>
+                        <div class="custom-dd" tabindex="0">
+                            <input type="hidden" id="sys_popup_sort">
+                            <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_sys_popup_sort">Newest First</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                            <div class="dd-options">
+                                <div class="dd-option" onclick="updateCustomDD(this, 'sys_popup_sort', 'lbl_sys_popup_sort', 'newest')">Newest First</div>
+                                <div class="dd-option" onclick="updateCustomDD(this, 'sys_popup_sort', 'lbl_sys_popup_sort', 'oldest')">Oldest First</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Popup Modals</div>
+                    <div id="popupsContainer"></div>
+                </div>
+            </div>
+
+            <div id="tab-toasts" class="form-panel">
+                <div class="section-header"><div><h1>Toast Messages</h1><p>Control the small action feedback messages.</p></div></div>
+                <div class="card">
+                    <div class="card-title">Toaster Text Controller</div>
+                    <div class="row-2">
+                        <div class="form-group"><label>On Copy</label><div class="flex-row"><input type="text" id="alt_toast_copied"><button class="btn-preview" onclick="testToast('alt_toast_copied')">Test</button></div></div>
+                        <div class="form-group"><label>On Save/Like</label><div class="flex-row"><input type="text" id="alt_toast_saved"><button class="btn-preview" onclick="testToast('alt_toast_saved')">Test</button></div></div>
+                        <div class="form-group"><label>On Remove</label><div class="flex-row"><input type="text" id="alt_toast_removed"><button class="btn-preview" onclick="testToast('alt_toast_removed')">Test</button></div></div>
+                        <div class="form-group"><label>On Prompt Created</label><div class="flex-row"><input type="text" id="alt_toast_created"><button class="btn-preview" onclick="testToast('alt_toast_created')">Test</button></div></div>
+                        <div class="form-group"><label>On Message Sent</label><div class="flex-row"><input type="text" id="alt_toast_sent"><button class="btn-preview" onclick="testToast('alt_toast_sent')">Test</button></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-dev" class="form-panel">
+                <div class="section-header"><div><h1>Developer Profile</h1><p>Customize the profile, dynamic buttons, and social links.</p></div></div>
+                <div class="card">
+                    <div class="card-title">Identity & Avatar</div>
+                    <div class="row-2">
+                        <div class="form-group"><label>Full Name</label><input type="text" id="dev_name"></div>
+                        <div class="form-group"><label>Handle</label><input type="text" id="dev_handle"></div>
+                    </div>
+                    <div class="form-group"><label>Role / Badge</label><input type="text" id="dev_badge"></div>
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label>Avatar Type</label>
+                            <div class="custom-dd" tabindex="0">
+                                <input type="hidden" id="dev_avatarType">
+                                <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_dev_avatarType">Initials (Text)</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+                                <div class="dd-options">
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'dev_avatarType', 'lbl_dev_avatarType', 'text')">Initials (Text)</div>
+                                    <div class="dd-option" onclick="updateCustomDD(this, 'dev_avatarType', 'lbl_dev_avatarType', 'image')">Image URL</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Initials</label><input type="text" id="dev_avatarText" maxlength="3"></div>
+                    </div>
+                    <div class="form-group"><label>Image URL</label><input type="text" id="dev_avatarImg"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Bio & Skills</div>
+                    <div class="toggle-row" style="margin-bottom: 12px;"><span class="toggle-label">Show Philosophy Quote</span><label class="switch"><input type="checkbox" id="dev_showQuote"><span class="slider"></span></label></div>
+                    <div class="form-group"><label>Quote</label><textarea id="dev_quote"></textarea></div>
+                    <div class="form-group"><label>Skills Tags (Comma separated)</label><input type="text" id="dev_skills" placeholder="HTML, CSS, JS"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Custom Action Buttons</div>
+                    <div id="devButtonsContainer"></div>
+                    <button class="btn-add-dynamic" onclick="addDevButton()">+ Add Action Button</button>
+                </div>
+                <div class="card">
+                    <div class="card-title">Social Platforms</div>
+                    <div id="devSocialsContainer"></div>
+                    <button class="btn-add-dynamic" onclick="addDevSocial()">+ Add Social Platform</button>
+                </div>
+            </div>
+
+            <div id="tab-legal" class="form-panel">
+                <div class="section-header"><div><h1>Legal Texts</h1><p>Manage Terms of Service and Privacy Policy content.</p></div></div>
+                <div class="card">
+                    <div class="form-group"><label>Terms of Service Title</label><input type="text" id="leg_tosTitle"></div>
+                    <div class="form-group"><label>Terms of Service Text</label><textarea id="leg_tosText" rows="5"></textarea></div>
+                    <div class="form-group" style="margin-top: 30px;"><label>Privacy Policy Title</label><input type="text" id="leg_privTitle"></div>
+                    <div class="form-group"><label>Privacy Policy Text</label><textarea id="leg_privText" rows="5"></textarea></div>
+                </div>
+            </div>
+        </main>
+
+        <nav class="mobile-nav" id="mobileNavContainer"></nav>
+    </div> <div class="modal-overlay" id="customAlertModal">
         <div class="system-modal-box">
             <div class="sys-modal-title">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -299,269 +626,7 @@
         </div>
     </div>
 
-    <button class="fab-add" id="fabAddBtn" title="Add New Item">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-    </button>
-
-    <div id="previewBanner">
-        <div class="pb-content" id="pb-content-text">Banner</div>
-        <div class="pb-actions" id="pb-actions-container"></div>
-        <button class="pb-close" onclick="document.getElementById('previewBanner').classList.remove('show')">✕</button>
-    </div>
     <div id="adminToast">Message</div>
-
-    <div class="mobile-header">
-        <div class="brand">
-            Prompt<span>Nova</span>
-            <div class="status-badge" id="mobStatusBadge"><div class="status-dot"></div><span id="mobStatusTxt">Locked</span></div>
-        </div>
-        <button class="btn-export-mobile btn-sync" id="btnSyncMob" onclick="saveChanges()" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Save
-        </button>
-    </div>
-
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-top">Prompt<span>Nova</span></div>
-            <div class="status-badge" id="deskStatusBadge"><div class="status-dot"></div><span id="deskStatusTxt">Locked</span></div>
-        </div>
-        <div class="nav-menu" id="desktopNavContainer"></div>
-        <div class="export-section">
-            <button class="btn-export btn-sync" id="btnSyncDesk" onclick="saveChanges()" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Save Changes to GitHub
-            </button>
-            <button class="btn-export" style="background:transparent; color:var(--text-secondary); border:1px solid var(--border-color);" onclick="openAdminSettings()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                Edit Tabs
-            </button>
-        </div>
-    </aside>
-
-    <main class="main-content" id="mainContentScroll">
-        
-        <div id="tab-site" class="form-panel active">
-            <div class="section-header"><div><h1>Site Configuration</h1><p>Manage branding, main colors, and layout defaults.</p></div></div>
-            <div class="card">
-                <div class="card-title">Branding & Colors</div>
-                <div class="form-group"><label>Page Browser Title</label><input type="text" id="site_pageTitle"></div>
-                <div class="row-2">
-                    <div class="form-group"><label>Logo Text (Part 1)</label><input type="text" id="site_namePart1"></div>
-                    <div class="form-group"><label>Logo Highlight (Part 2)</label><input type="text" id="site_namePart2"></div>
-                </div>
-                <div class="form-group" style="margin-top: 10px;"><label>Main Accent Color (Buttons & Highlights)</label><input type="color" id="site_accentColor"></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Layout Defaults</div>
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Default Theme</label>
-                        <div class="custom-dd" tabindex="0">
-                            <input type="hidden" id="site_defaultTheme">
-                            <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_site_defaultTheme">Select Theme</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-                            <div class="dd-options">
-                                <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultTheme', 'lbl_site_defaultTheme', 'dark')">Dark Theme</div>
-                                <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultTheme', 'lbl_site_defaultTheme', 'light')">Light Theme</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Default Layout View</label>
-                        <div class="custom-dd" tabindex="0">
-                            <input type="hidden" id="site_defaultView">
-                            <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_site_defaultView">Select View</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-                            <div class="dd-options">
-                                <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'grid')">Grid (Immersive)</div>
-                                <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'card')">Cards</div>
-                                <div class="dd-option" onclick="updateCustomDD(this, 'site_defaultView', 'lbl_site_defaultView', 'detail')">Detail List</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-pending" class="form-panel">
-            <div class="section-header">
-                <div><h1>Pending Approvals</h1><p>Review prompts submitted by users before they go live.</p></div>
-            </div>
-            <div id="pendingContainer"></div>
-        </div>
-
-        <div id="tab-data" class="form-panel">
-            <div class="section-header">
-                <div><h1>Live Library</h1><p>Manage all active prompts in the database.</p></div>
-            </div>
-            <div id="promptsContainer"></div>
-        </div>
-
-        <div id="tab-users" class="form-panel">
-            <div class="section-header">
-                <div><h1>User Database</h1><p>Manage all registered accounts securely. Color coded by gender.</p></div>
-            </div>
-            <div id="usersContainer"></div>
-        </div>
-
-        <div id="tab-system" class="form-panel">
-            <div class="section-header"><div><h1>System & UI Features</h1><p>Turn core features on/off and manage security.</p></div></div>
-            
-            <div class="card" style="border-color: var(--accent-danger); border-width: 2px;">
-                <div class="card-title" style="color: var(--accent-danger);">Admin Login Security</div>
-                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Update the master password for this admin panel. Will be stored securely via Base64 encoding.</p>
-                <div class="row-2">
-                    <div class="form-group"><label>New Username</label><input type="text" id="sec_adminUser" placeholder="Enter new admin username"></div>
-                    <div class="form-group"><label>New Password</label><input type="password" id="sec_adminPass" placeholder="Enter new admin password"></div>
-                </div>
-                <button class="btn-sync" style="background: linear-gradient(135deg, var(--accent-danger), #fda4af); width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor:pointer;" onclick="updateAdminCredentials()">Update Admin Credentials</button>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Admin Contact Links (Message Page)</div>
-                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">These buttons will appear to users in the "Message" tab of the Create menu.</p>
-                <div id="contactButtonsContainer"></div>
-                <button class="btn-add-dynamic" onclick="addContactButton()">+ Add Contact Link</button>
-            </div>
-
-            <div class="card">
-                <div class="card-title">UI Feature Switches</div>
-                <div class="toggle-row"><span class="toggle-label">Enable Settings Menu</span><label class="switch"><input type="checkbox" id="sys_feat_settings"><span class="slider"></span></label></div>
-                <div class="toggle-row"><span class="toggle-label">Enable Legal Menu</span><label class="switch"><input type="checkbox" id="sys_feat_legal"><span class="slider"></span></label></div>
-                <div class="toggle-row"><span class="toggle-label">Enable Developer Profile</span><label class="switch"><input type="checkbox" id="sys_feat_dev"><span class="slider"></span></label></div>
-            </div>
-            
-            <div class="card">
-                <div class="card-title">Sidebar Menu Text</div>
-                <div class="row-3">
-                    <div class="form-group"><label>Settings</label><input type="text" id="sys_menu_settings"></div>
-                    <div class="form-group"><label>Legal</label><input type="text" id="sys_menu_legal"></div>
-                    <div class="form-group"><label>Developer</label><input type="text" id="sys_menu_dev"></div>
-                </div>
-                <div class="form-group" style="margin-top: 16px;"><label>Footer HTML (Made By)</label><textarea id="sys_menu_footer" rows="2"></textarea></div>
-            </div>
-            
-            <div class="card">
-                <div class="card-title">Bottom App Navigation Text</div>
-                <div class="row-3">
-                    <div class="form-group"><label>Home Tab</label><input type="text" id="sys_nav_home"></div>
-                    <div class="form-group"><label>Create Button</label><input type="text" id="sys_nav_create"></div>
-                    <div class="form-group"><label>Library Tab</label><input type="text" id="sys_nav_lib"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-notif" class="form-panel">
-            <div class="section-header"><div><h1>Top Notifications</h1><p>Manage tiny top banner announcements with cross icons.</p></div></div>
-            <div class="card">
-                <div class="card-title">Global Settings</div>
-                <div class="form-group">
-                    <label>Display Order (Main Site)</label>
-                    <div class="custom-dd" tabindex="0">
-                        <input type="hidden" id="sys_notif_sort">
-                        <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_sys_notif_sort">Newest First</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-                        <div class="dd-options">
-                            <div class="dd-option" onclick="updateCustomDD(this, 'sys_notif_sort', 'lbl_sys_notif_sort', 'newest')">Newest First</div>
-                            <div class="dd-option" onclick="updateCustomDD(this, 'sys_notif_sort', 'lbl_sys_notif_sort', 'oldest')">Oldest First</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">Notification Banners</div>
-                <div id="notifsContainer"></div>
-            </div>
-        </div>
-
-        <div id="tab-popup" class="form-panel">
-            <div class="section-header"><div><h1>Center Popups</h1><p>Manage modal popup announcements.</p></div></div>
-            <div class="card">
-                <div class="card-title">Global Settings</div>
-                <div class="form-group">
-                    <label>Display Order (Main Site)</label>
-                    <div class="custom-dd" tabindex="0">
-                        <input type="hidden" id="sys_popup_sort">
-                        <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_sys_popup_sort">Newest First</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-                        <div class="dd-options">
-                            <div class="dd-option" onclick="updateCustomDD(this, 'sys_popup_sort', 'lbl_sys_popup_sort', 'newest')">Newest First</div>
-                            <div class="dd-option" onclick="updateCustomDD(this, 'sys_popup_sort', 'lbl_sys_popup_sort', 'oldest')">Oldest First</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">Popup Modals</div>
-                <div id="popupsContainer"></div>
-            </div>
-        </div>
-
-        <div id="tab-toasts" class="form-panel">
-            <div class="section-header"><div><h1>Toast Messages</h1><p>Control the small action feedback messages.</p></div></div>
-            <div class="card">
-                <div class="card-title">Toaster Text Controller</div>
-                <div class="row-2">
-                    <div class="form-group"><label>On Copy</label><div class="flex-row"><input type="text" id="alt_toast_copied"><button class="btn-preview" onclick="testToast('alt_toast_copied')">Test</button></div></div>
-                    <div class="form-group"><label>On Save/Like</label><div class="flex-row"><input type="text" id="alt_toast_saved"><button class="btn-preview" onclick="testToast('alt_toast_saved')">Test</button></div></div>
-                    <div class="form-group"><label>On Remove</label><div class="flex-row"><input type="text" id="alt_toast_removed"><button class="btn-preview" onclick="testToast('alt_toast_removed')">Test</button></div></div>
-                    <div class="form-group"><label>On Prompt Created</label><div class="flex-row"><input type="text" id="alt_toast_created"><button class="btn-preview" onclick="testToast('alt_toast_created')">Test</button></div></div>
-                    <div class="form-group"><label>On Message Sent</label><div class="flex-row"><input type="text" id="alt_toast_sent"><button class="btn-preview" onclick="testToast('alt_toast_sent')">Test</button></div></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-dev" class="form-panel">
-            <div class="section-header"><div><h1>Developer Profile</h1><p>Customize the profile, dynamic buttons, and social links.</p></div></div>
-            <div class="card">
-                <div class="card-title">Identity & Avatar</div>
-                <div class="row-2">
-                    <div class="form-group"><label>Full Name</label><input type="text" id="dev_name"></div>
-                    <div class="form-group"><label>Handle</label><input type="text" id="dev_handle"></div>
-                </div>
-                <div class="form-group"><label>Role / Badge</label><input type="text" id="dev_badge"></div>
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Avatar Type</label>
-                        <div class="custom-dd" tabindex="0">
-                            <input type="hidden" id="dev_avatarType">
-                            <div class="dd-trigger" onclick="this.parentElement.classList.toggle('active')"><span id="lbl_dev_avatarType">Initials (Text)</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-                            <div class="dd-options">
-                                <div class="dd-option" onclick="updateCustomDD(this, 'dev_avatarType', 'lbl_dev_avatarType', 'text')">Initials (Text)</div>
-                                <div class="dd-option" onclick="updateCustomDD(this, 'dev_avatarType', 'lbl_dev_avatarType', 'image')">Image URL</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group"><label>Initials</label><input type="text" id="dev_avatarText" maxlength="3"></div>
-                </div>
-                <div class="form-group"><label>Image URL</label><input type="text" id="dev_avatarImg"></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Bio & Skills</div>
-                <div class="toggle-row" style="margin-bottom: 12px;"><span class="toggle-label">Show Philosophy Quote</span><label class="switch"><input type="checkbox" id="dev_showQuote"><span class="slider"></span></label></div>
-                <div class="form-group"><label>Quote</label><textarea id="dev_quote"></textarea></div>
-                <div class="form-group"><label>Skills Tags (Comma separated)</label><input type="text" id="dev_skills" placeholder="HTML, CSS, JS"></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Custom Action Buttons</div>
-                <div id="devButtonsContainer"></div>
-                <button class="btn-add-dynamic" onclick="addDevButton()">+ Add Action Button</button>
-            </div>
-            <div class="card">
-                <div class="card-title">Social Platforms</div>
-                <div id="devSocialsContainer"></div>
-                <button class="btn-add-dynamic" onclick="addDevSocial()">+ Add Social Platform</button>
-            </div>
-        </div>
-
-        <div id="tab-legal" class="form-panel">
-            <div class="section-header"><div><h1>Legal Texts</h1><p>Manage Terms of Service and Privacy Policy content.</p></div></div>
-            <div class="card">
-                <div class="form-group"><label>Terms of Service Title</label><input type="text" id="leg_tosTitle"></div>
-                <div class="form-group"><label>Terms of Service Text</label><textarea id="leg_tosText" rows="5"></textarea></div>
-                <div class="form-group" style="margin-top: 30px;"><label>Privacy Policy Title</label><input type="text" id="leg_privTitle"></div>
-                <div class="form-group"><label>Privacy Policy Text</label><textarea id="leg_privText" rows="5"></textarea></div>
-            </div>
-        </div>
-    </main>
-
-    <nav class="mobile-nav" id="mobileNavContainer"></nav>
 
     <div class="modal-overlay" id="userModal">
         <div class="modal-box" style="max-width: 600px;">
@@ -593,8 +658,7 @@
                 <button class="modal-close" onclick="closeModal('likesModal')">✕</button>
             </div>
             <div class="modal-body">
-                <div id="likesListContainer" style="display: flex; flex-direction: column; gap: 8px;">
-                    </div>
+                <div id="likesListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
         </div>
     </div>
@@ -753,7 +817,7 @@
         const FULL_TOKEN = TOKEN_P1 + TOKEN_P2 + TOKEN_P3 + TOKEN_P4;
         // =========================================================================
 
-        let state = { site: {}, system: {}, settings: {}, data: { prompts: [] }, users: {}, create: { prompts: [] }, adminAuth: {} };
+        let state = { site: {}, system: {}, settings: {}, data: { prompts: [] }, users: {}, create: { prompts: [] }, adminAuth: null };
         let fileShas = { site: null, system: null, settings: null, data: null, users: null, create: null, adminAuth: null };
         let isConnected = false;
         let isOfflineMode = false;
@@ -764,6 +828,7 @@
             { id: "tab-pending", label: "Pending Approvals", icon: "<svg viewBox='0 0 24 24'><path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'></path></svg>"},
             { id: "tab-data", label: "Live Library", icon: "<svg viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>"},
             { id: "tab-users", label: "User Database", icon: "<svg viewBox='0 0 24 24'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'></path><circle cx='9' cy='7' r='4'></circle><path d='M23 21v-2a4 4 0 0 0-3-3.87'></path><path d='M16 3.13a4 4 0 0 1 0 7.75'></path></svg>"},
+            { id: "tab-security", label: "Security 🛡️", icon: "<svg viewBox='0 0 24 24'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'></path></svg>"},
             { id: "tab-system", label: "System UI", icon: "<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'></circle><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'></path></svg>"},
             { id: "tab-notif", label: "Top Banners", icon: "<svg viewBox='0 0 24 24'><rect x='3' y='4' width='18' height='4' rx='1'></rect><line x1='3' y1='12' x2='21' y2='12'></line></svg>"},
             { id: "tab-popup", label: "Popups", icon: "<svg viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='16' rx='2' ry='2'></rect><rect x='9' y='9' width='6' height='6'></rect></svg>"},
@@ -772,9 +837,8 @@
             { id: "tab-legal", label: "Legal", icon: "<svg viewBox='0 0 24 24'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'></path><polyline points='14 2 14 8 20 8'></polyline><line x1='16' y1='13' x2='8' y2='13'></line><line x1='16' y1='17' x2='8' y2='17'></line></svg>"}
         ].map(t => ({...t, visible: true}));
 
-        let adminTabs = JSON.parse(localStorage.getItem('pn_admin_ui_prefs')) || defaultAdminTabs;
+        let adminTabs = JSON.parse(localStorage.getItem('pn_admin_ui_prefs_v5')) || defaultAdminTabs;
 
-        // Custom UI Modal Handling
         function customAlert(message, title="Notice") {
             document.getElementById('ca_title').innerHTML = title; document.getElementById('ca_msg').innerHTML = message;
             document.getElementById('customAlertModal').classList.add('active');
@@ -796,23 +860,138 @@
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        // --- ADMIN LOGIN LOGIC ---
+        // --- GITHUB API FETCH ---
+        async function fetchWithFallback(filename, defaultData) {
+            const cb = new Date().getTime(); 
+            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}?ref=${GITHUB_BRANCH}&t=${cb}`;
+            const headers = { "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${FULL_TOKEN}` };
+            
+            const res = await fetch(url, { headers });
+            
+            if (res.status === 401 || res.status === 403) throw new Error("Authentication Failed: Invalid GitHub Token.");
+            
+            if (res.status === 404) {
+                console.log(`${filename} missing.`);
+                return { json: defaultData, sha: null };
+            }
+            
+            if(!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+            
+            const data = await res.json();
+            return { json: JSON.parse(decodeURIComponent(escape(atob(data.content)))), sha: data.sha };
+        }
+
+        async function autoConnectToGitHub() {
+            try {
+                const [siteRes, sysRes, setRes, dataRes, usersRes, createRes, adminAuthRes] = await Promise.all([
+                    fetchWithFallback('site.json', {}), 
+                    fetchWithFallback('system.json', {}), 
+                    fetchWithFallback('settings.json', {}), 
+                    fetchWithFallback('data.json', { prompts: [] }),
+                    fetchWithFallback('users.json', {}), 
+                    fetchWithFallback('create.json', { prompts: [] }),
+                    fetchWithFallback('admin_auth.json', null) 
+                ]);
+
+                state.site = siteRes.json; fileShas.site = siteRes.sha;
+                state.system = sysRes.json; fileShas.system = sysRes.sha;
+                state.settings = setRes.json; fileShas.settings = setRes.sha;
+                state.data = dataRes.json || { prompts: [] }; fileShas.data = dataRes.sha;
+                state.users = usersRes.json || {}; fileShas.users = usersRes.sha;
+                state.create = createRes.json || { prompts: [] }; fileShas.create = createRes.sha;
+                state.adminAuth = adminAuthRes.json; fileShas.adminAuth = adminAuthRes.sha;
+
+                // STRICT Security Lock Check
+                if (fileShas.adminAuth === null || !state.adminAuth) {
+                    document.getElementById('missingAdminWarning').style.display = 'block';
+                    document.getElementById('adminLoginFormGroup').style.display = 'none';
+                } else {
+                    document.getElementById('missingAdminWarning').style.display = 'none';
+                    document.getElementById('adminLoginFormGroup').style.display = 'block';
+                }
+
+                if(!state.system.notifSortOrder) state.system.notifSortOrder = 'newest';
+                if(!state.system.popupSortOrder) state.system.popupSortOrder = 'newest';
+                if(!state.system.notifications) state.system.notifications = [];
+                if(!state.system.popups) state.system.popups = [];
+                if(!state.system.contactButtons) state.system.contactButtons = [];
+                
+            } catch (error) {
+                customAlert("GitHub Connection Failed: <br>" + error.message, "Connection Error");
+            } finally {
+                document.getElementById('loaderOverlay').classList.remove('active');
+            }
+        }
+
+        function encodeBase64Unicode(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+        async function pushToGitHub(filename, contentObj, existingSha) {
+            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}`;
+            const headers = { "Authorization": `Bearer ${FULL_TOKEN}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" };
+
+            let sha = existingSha;
+            if (!sha) {
+                try {
+                    const getRes = await fetch(url + `?ref=${GITHUB_BRANCH}&t=${new Date().getTime()}`, { headers });
+                    if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+                } catch(e) {}
+            }
+
+            const body = { message: `Admin Update: ${filename}`, content: encodeBase64Unicode(JSON.stringify(contentObj, null, 2)), branch: GITHUB_BRANCH };
+            if(sha) body.sha = sha;
+
+            const putRes = await fetch(url, { method: "PUT", headers, body: JSON.stringify(body) });
+            if(!putRes.ok) throw new Error(`Failed to save ${filename}`);
+            const putData = await putRes.json();
+            return putData.content.sha;
+        }
+
+        // --- STRICT ADMIN LOGIN LOGIC ---
         function verifyAdminLogin() {
+            if (!state.adminAuth || !state.adminAuth.user) {
+                customAlert("Critical Error: admin_auth.json is missing. You cannot login. Please click 'Initialize Security File'.", "Security Lock");
+                return;
+            }
+
             const u = document.getElementById('adminLogUser').value;
             const p = document.getElementById('adminLogPass').value;
             
             if (btoa(u) === state.adminAuth.user && btoa(p) === state.adminAuth.pass) {
-                document.getElementById('adminLoginScreen').classList.add('hidden');
+                document.getElementById('adminLoginScreen').remove();
+                document.getElementById('appContent').style.display = 'flex';
+                
+                isConnected = true; isOfflineMode = false;
+                populateForms(); updateStatusUI(); switchTab('tab-site');
                 testToast("Admin Access Granted 🟢");
             } else {
                 customAlert("Invalid Admin Credentials. Please try again.", "Access Denied");
             }
         }
 
+        async function initializeAdminAuth(event) {
+            if(event) { event.preventDefault(); event.stopPropagation(); }
+            const btn = event.target;
+            btn.innerText = "Creating Secure File..."; btn.disabled = true;
+
+            try {
+                const newAuth = { user: btoa("admin"), pass: btoa("admin123") }; 
+                const newSha = await pushToGitHub('admin_auth.json', newAuth, null);
+                state.adminAuth = newAuth;
+                fileShas.adminAuth = newSha;
+
+                document.getElementById('missingAdminWarning').style.display = 'none';
+                document.getElementById('adminLoginFormGroup').style.display = 'block';
+                testToast("✅ Security Established! You can now log in with admin / admin123.");
+            } catch(e) {
+                customAlert("Failed to create admin file: " + e.message, "Creation Error");
+                btn.innerText = "Initialize Security File"; btn.disabled = false;
+            }
+        }
+
         async function updateAdminCredentials() {
             const u = document.getElementById('sec_adminUser').value;
             const p = document.getElementById('sec_adminPass').value;
-            if(!u || !p) { customAlert("New Username and Password cannot be empty."); return; }
+            if(!u || !p) { customAlert("New Username and Password cannot be empty.", "Error"); return; }
 
             state.adminAuth.user = btoa(u);
             state.adminAuth.pass = btoa(p);
@@ -823,13 +1002,35 @@
                 document.getElementById('sec_adminUser').value = '';
                 document.getElementById('sec_adminPass').value = '';
             } catch(e) { 
-                customAlert("Failed to update credentials: " + e.message); 
+                customAlert("Failed to update credentials: " + e.message, "Update Failed"); 
+            }
+        }
+
+        async function saveChanges() {
+            if(!isConnected) { customAlert("GitHub is not connected.", "Error"); return; }
+            syncFormsToState();
+            document.getElementById('loaderText').innerText = "Syncing changes to live server...";
+            const loader = document.getElementById('loaderOverlay'); loader.classList.add('active');
+
+            try {
+                fileShas.site = await pushToGitHub('site.json', state.site, fileShas.site);
+                fileShas.system = await pushToGitHub('system.json', state.system, fileShas.system);
+                fileShas.settings = await pushToGitHub('settings.json', state.settings, fileShas.settings);
+                fileShas.data = await pushToGitHub('data.json', state.data, fileShas.data);
+                fileShas.users = await pushToGitHub('users.json', state.users, fileShas.users);
+                fileShas.create = await pushToGitHub('create.json', state.create, fileShas.create);
+                
+                loader.classList.remove('active');
+                testToast("✅ Successfully synced to GitHub!");
+            } catch (error) {
+                loader.classList.remove('active');
+                customAlert("GitHub Sync Error: <br>" + error.message, "Sync Failed");
             }
         }
 
         // --- Layout Control ---
         function openAdminSettings() { renderAdminSettingsList(); openModal('adminSettingsModal'); }
-        function closeAdminSettings() { localStorage.setItem('pn_admin_ui_prefs', JSON.stringify(adminTabs)); renderNavigation(); closeModal('adminSettingsModal'); }
+        function closeAdminSettings() { localStorage.setItem('pn_admin_ui_prefs_v5', JSON.stringify(adminTabs)); renderNavigation(); closeModal('adminSettingsModal'); }
         function renderAdminSettingsList() {
             const container = document.getElementById('adminTabsContainer'); container.innerHTML = '';
             adminTabs.forEach((tab, index) => {
@@ -879,118 +1080,6 @@
                 deskTxt.innerText = "Offline Mode"; mobTxt.innerText = "Offline Mode";
             }
             renderNavigation();
-        }
-
-        // --- GITHUB API ---
-        async function fetchWithFallback(filename, defaultData) {
-            const cb = new Date().getTime(); 
-            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}?ref=${GITHUB_BRANCH}&t=${cb}`;
-            const headers = { "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${FULL_TOKEN}` };
-            
-            const res = await fetch(url, { headers });
-            
-            if (res.status === 401 || res.status === 403) {
-                throw new Error("Authentication Failed: Invalid GitHub Token.");
-            }
-            
-            if (res.status === 404) {
-                console.log(`${filename} missing, defaulting.`);
-                return { json: defaultData, sha: null };
-            }
-            
-            if(!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-            
-            const data = await res.json();
-            return { json: JSON.parse(decodeURIComponent(escape(atob(data.content)))), sha: data.sha };
-        }
-
-        async function autoConnectToGitHub() {
-            try {
-                const [siteRes, sysRes, setRes, dataRes, usersRes, createRes, adminAuthRes] = await Promise.all([
-                    fetchWithFallback('site.json', {}), 
-                    fetchWithFallback('system.json', {}), 
-                    fetchWithFallback('settings.json', {}), 
-                    fetchWithFallback('data.json', { prompts: [] }),
-                    fetchWithFallback('users.json', {}), 
-                    fetchWithFallback('create.json', { prompts: [] }),
-                    fetchWithFallback('admin_auth.json', { user: "YWRtaW4=", pass: "YWRtaW4xMjM=" }) // Default admin / admin123
-                ]);
-
-                state.site = siteRes.json; fileShas.site = siteRes.sha;
-                state.system = sysRes.json; fileShas.system = sysRes.sha;
-                state.settings = setRes.json; fileShas.settings = setRes.sha;
-                
-                state.data = dataRes.json || { prompts: [] }; fileShas.data = dataRes.sha;
-                state.users = usersRes.json || {}; fileShas.users = usersRes.sha;
-                state.create = createRes.json || { prompts: [] }; fileShas.create = createRes.sha;
-                
-                state.adminAuth = adminAuthRes.json; fileShas.adminAuth = adminAuthRes.sha;
-
-                if(!state.system.notifSortOrder) state.system.notifSortOrder = 'newest';
-                if(!state.system.popupSortOrder) state.system.popupSortOrder = 'newest';
-                if(!state.system.notifications) state.system.notifications = [];
-                if(!state.system.popups) state.system.popups = [];
-                if(!state.system.contactButtons) state.system.contactButtons = [];
-
-                isConnected = true; isOfflineMode = false;
-                populateForms(); updateStatusUI(); switchTab('tab-site');
-                
-            } catch (error) {
-                customAlert("GitHub Connection Failed: <br>" + error.message, "Connection Error");
-                startOfflineMode();
-            } finally {
-                // Hide loader and SHOW the Admin Login Screen
-                document.getElementById('loaderOverlay').classList.remove('active');
-            }
-        }
-
-        function encodeBase64Unicode(str) { return btoa(unescape(encodeURIComponent(str))); }
-
-        async function pushToGitHub(filename, contentObj, existingSha) {
-            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}`;
-            const headers = { "Authorization": `Bearer ${FULL_TOKEN}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" };
-
-            let sha = existingSha;
-            try {
-                const getRes = await fetch(url + `?ref=${GITHUB_BRANCH}&t=${new Date().getTime()}`, { headers });
-                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-            } catch(e) {}
-
-            const body = { message: `Admin Update: ${filename}`, content: encodeBase64Unicode(JSON.stringify(contentObj, null, 2)), branch: GITHUB_BRANCH };
-            if(sha) body.sha = sha;
-
-            const putRes = await fetch(url, { method: "PUT", headers, body: JSON.stringify(body) });
-            if(!putRes.ok) throw new Error(`Failed to save ${filename}`);
-            const putData = await putRes.json();
-            return putData.content.sha; // Return new sha
-        }
-
-        async function saveChanges() {
-            if(!isConnected) { customAlert("GitHub is not connected.", "Error"); return; }
-            syncFormsToState();
-            document.getElementById('loaderText').innerText = "Syncing changes to live server...";
-            const loader = document.getElementById('loaderOverlay'); loader.classList.add('active');
-
-            try {
-                fileShas.site = await pushToGitHub('site.json', state.site, fileShas.site);
-                fileShas.system = await pushToGitHub('system.json', state.system, fileShas.system);
-                fileShas.settings = await pushToGitHub('settings.json', state.settings, fileShas.settings);
-                fileShas.data = await pushToGitHub('data.json', state.data, fileShas.data);
-                fileShas.users = await pushToGitHub('users.json', state.users, fileShas.users);
-                fileShas.create = await pushToGitHub('create.json', state.create, fileShas.create);
-                
-                loader.classList.remove('active');
-                testToast("✅ Successfully synced to GitHub!", true);
-            } catch (error) {
-                loader.classList.remove('active');
-                customAlert("GitHub Sync Error: <br>" + error.message, "Sync Failed");
-            }
-        }
-
-        function startOfflineMode() {
-            state = { site: { defaultTheme: "dark", defaultView: "grid", accentColor: "#818CF8" }, system: { features: {}, menuText: {}, bottomNavText: {}, toasts: {}, notifications: [], popups: [], contactButtons: [] }, settings: { developer: { skills:[], buttons:[], socials:[] }, legal: {} }, data: { prompts: [] }, users: {}, create: { prompts: [] }, adminAuth: {user: "YWRtaW4=", pass: "YWRtaW4xMjM="} };
-            isOfflineMode = true; isConnected = false;
-            populateForms(); updateStatusUI(); switchTab('tab-site');
         }
 
         // --- Custom UI DD ---
@@ -1044,14 +1133,13 @@
             clearTimeout(tTOut); tTOut = setTimeout(() => t.classList.remove("show"), 2500);
         }
 
-        // --- NEW ENHANCED USER MANAGEMENT (users.json) ---
+        // --- ENHANCED USER MANAGEMENT (users.json) ---
         function renderUsersList() {
             const container = document.getElementById('usersContainer'); container.innerHTML = '';
             if(!state.users) state.users = {};
             const userKeys = Object.keys(state.users);
             if(userKeys.length === 0) { container.innerHTML = `<div class="empty-state" style="display:block; padding:40px;">No registered users found.</div>`; return; }
 
-            // Enhanced Grid Layout
             container.style.display = "grid";
             container.style.gridTemplateColumns = "repeat(auto-fill, minmax(300px, 1fr))";
             container.style.gap = "16px";
@@ -1060,40 +1148,25 @@
                 const u = state.users[username];
                 const joinDate = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : 'Legacy';
 
-                // Gender Color System
-                let genderColor = "var(--text-secondary)";
-                let genderBg = "var(--bg-input)";
-                let genderBorder = "var(--border-color)";
+                let genderColor = "var(--text-secondary)"; let genderBg = "var(--bg-input)"; let genderBorder = "var(--border-color)";
                 let genderText = u.gender ? u.gender.toLowerCase() : '';
 
-                if(genderText === 'male') {
-                    genderColor = "#38bdf8"; genderBg = "rgba(56, 189, 248, 0.1)"; genderBorder = "rgba(56, 189, 248, 0.2)";
-                } else if(genderText === 'female') {
-                    genderColor = "#f43f5e"; genderBg = "rgba(244, 63, 94, 0.1)"; genderBorder = "rgba(244, 63, 94, 0.2)";
-                } else if(genderText === 'other') {
-                    genderColor = "#a78bfa"; genderBg = "rgba(167, 139, 250, 0.1)"; genderBorder = "rgba(167, 139, 250, 0.2)";
-                }
+                if(genderText === 'male') { genderColor = "#38bdf8"; genderBg = "rgba(56, 189, 248, 0.1)"; genderBorder = "rgba(56, 189, 248, 0.2)"; } 
+                else if(genderText === 'female') { genderColor = "#f43f5e"; genderBg = "rgba(244, 63, 94, 0.1)"; genderBorder = "rgba(244, 63, 94, 0.2)"; } 
+                else if(genderText === 'other') { genderColor = "#a78bfa"; genderBg = "rgba(167, 139, 250, 0.1)"; genderBorder = "rgba(167, 139, 250, 0.2)"; }
 
                 container.innerHTML += `
                     <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                            <div>
-                                <h3 style="color: var(--text-primary); font-size: 16px; font-weight: 700;">@${username}</h3>
-                                <p style="color: var(--text-secondary); font-size: 13px; margin-top: 4px;">${u.firstName || ''} ${u.lastName || ''}</p>
-                            </div>
+                            <div><h3 style="color: var(--text-primary); font-size: 16px; font-weight: 700;">@${username}</h3><p style="color: var(--text-secondary); font-size: 13px; margin-top: 4px;">${u.firstName || ''} ${u.lastName || ''}</p></div>
                             <span style="font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: 600; background: ${genderBg}; color: ${genderColor}; border: 1px solid ${genderBorder};">${u.gender || 'N/A'}</span>
                         </div>
-                        
                         <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
                             <div style="display:flex; justify-content: space-between;"><span>DOB:</span> <strong style="color:var(--text-primary);">${u.dob || 'N/A'}</strong></div>
                             <div style="display:flex; justify-content: space-between;"><span>Joined:</span> <strong style="color:var(--text-primary);">${joinDate}</strong></div>
                             <div style="display:flex; justify-content: space-between;"><span>Pass:</span> <strong style="color:var(--accent-danger);">${u.password}</strong></div>
                         </div>
-
-                        <div style="font-size: 11px; text-align: center; color: var(--accent-purple); word-break: break-all; background: rgba(129, 140, 248, 0.05); padding: 8px; border-radius: 6px; border: 1px dashed rgba(129, 140, 248, 0.3);">
-                            Token: ${u.token || 'N/A'}
-                        </div>
-
+                        <div style="font-size: 11px; text-align: center; color: var(--accent-purple); word-break: break-all; background: rgba(129, 140, 248, 0.05); padding: 8px; border-radius: 6px; border: 1px dashed rgba(129, 140, 248, 0.3);">Token: ${u.token || 'N/A'}</div>
                         <div style="display: flex; gap: 8px; margin-top: auto;">
                             <button class="btn-edit" style="flex: 1; padding: 10px;" onclick="openUserModal('${username}')">Edit</button>
                             <button class="btn-remove-dynamic" style="position: static; flex: 1; padding: 10px;" onclick="deleteUser('${username}')">Delete</button>
@@ -1104,7 +1177,7 @@
 
         async function deleteUser(username) {
             const confirmed = await customConfirm(`Are you sure you want to permanently delete user @${username}?`, "Delete User", "Delete");
-            if(confirmed) { delete state.users[username]; renderUsersList(); testToast(`Deleted @${username}`, true); }
+            if(confirmed) { delete state.users[username]; renderUsersList(); testToast(`Deleted @${username}`); }
         }
 
         function openUserModal(username) {
@@ -1128,7 +1201,7 @@
             state.users[username].dob = document.getElementById('um_dob').value;
             state.users[username].password = document.getElementById('um_pass').value;
             state.users[username].token = document.getElementById('um_token').value;
-            closeModal('userModal'); renderUsersList(); testToast("User details updated locally. Remember to save.", true);
+            closeModal('userModal'); renderUsersList(); testToast("User details updated locally. Remember to save.");
         }
 
         // --- PENDING APPROVALS (create.json) ---
@@ -1161,15 +1234,15 @@
                 if(!state.data.prompts) state.data.prompts = [];
                 state.data.prompts.unshift(prompt); // Add to live
                 state.create.prompts.splice(index, 1); // Remove from queue
-                renderPendingList(); testToast("Prompt Approved & Moved to Live", true);
+                renderPendingList(); testToast("Prompt Approved & Moved to Live");
             }
         }
         async function rejectPrompt(index) {
             const confirmed = await customConfirm("Are you sure you want to discard this user submission?", "Reject Submission", "Reject");
-            if(confirmed) { state.create.prompts.splice(index, 1); renderPendingList(); testToast("Prompt Rejected", true); }
+            if(confirmed) { state.create.prompts.splice(index, 1); renderPendingList(); testToast("Prompt Rejected"); }
         }
 
-        // --- PROMPT MODAL EDITOR (Supports both data.json and create.json) ---
+        // --- PROMPT MODAL EDITOR ---
         function renderPromptsList() {
             const container = document.getElementById('promptsContainer'); container.innerHTML = '';
             if(!state.data.prompts) state.data.prompts = [];
@@ -1194,7 +1267,6 @@
                         </div>
                     </div>`;
                     
-                // Attach real-time listener if Firebase is configured
                 if(window.db) {
                     const totalRef = window.fbRef(window.db, `likes/${prompt.id}/totalCount`);
                     window.fbOnValue(totalRef, (snap) => {
@@ -1292,7 +1364,7 @@
             if(source === 'data') renderPromptsList(); else renderPendingList();
         }
 
-        // --- NEW: ADMIN CONTACT BUTTONS (system.json) ---
+        // --- DYNAMIC ARRAYS & SETTINGS SYNC ---
         function renderContactButtons() {
             const container = document.getElementById('contactButtonsContainer'); container.innerHTML = '';
             (state.system.contactButtons || []).forEach((btn, index) => {
@@ -1310,8 +1382,6 @@
         function addContactButton() { syncFormsToState(); if(!state.system.contactButtons) state.system.contactButtons = []; state.system.contactButtons.push({text: "Chat", url: "#", iconSvg: "<svg></svg>"}); renderContactButtons(); }
         function removeContactButton(index) { syncFormsToState(); state.system.contactButtons.splice(index, 1); renderContactButtons(); }
 
-
-        // --- FORMS POPULATION & SYNC ---
         function populateForms() {
             try {
                 document.getElementById('site_pageTitle').value = state.site.pageTitle || "";
