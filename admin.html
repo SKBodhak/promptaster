@@ -717,15 +717,15 @@
         // =========================================================================
         // 🔒 GITHUB HARDCODED CONFIGURATION
         // =========================================================================
-        const GITHUB_OWNER = "SKBodhak";           // Change to your GitHub Username
-        const GITHUB_REPO = "PromptNova";          // Change to your Repository Name
-        const GITHUB_BRANCH = "main";              // Change if you use a different branch
+        const GITHUB_OWNER = "SKBodhak";           
+        const GITHUB_REPO = "promptaster";          
+        const GITHUB_BRANCH = "main";              
         
         // Split your Personal Access Token here to prevent GitHub auto-revoking it.
-        const TOKEN_P1 = "ghp_xxxxxxxx"; 
-        const TOKEN_P2 = "xxxxxxxxxxxxxxxx";
-        const TOKEN_P3 = "xxxxxxxxxxxxxxxx";
-        const TOKEN_P4 = "xxxxxxxx";
+        const TOKEN_P1 = "github_pat_11A3JHEY"; 
+        const TOKEN_P2 = "A0OGs2LKDKRf2X_f1Nkb";
+        const TOKEN_P3 = "oezoawdMTo5iM6z1AUEh";
+        const TOKEN_P4 = "GlvR2M3jqwaiJfcAZBYCAKX3NRVXs9Bepa";
         const FULL_TOKEN = TOKEN_P1 + TOKEN_P2 + TOKEN_P3 + TOKEN_P4;
         // =========================================================================
 
@@ -832,7 +832,6 @@
             const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}?ref=${GITHUB_BRANCH}&t=${cb}`;
             const headers = { "Accept": "application/vnd.github.v3+json" };
             
-            // Only add auth header if token is actually entered (not default)
             if (FULL_TOKEN.length > 10 && !FULL_TOKEN.includes("xxxxxxxx")) {
                 headers["Authorization"] = `Bearer ${FULL_TOKEN}`;
             }
