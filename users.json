@@ -1,1 +1,12 @@
-{}
+{
+  "shaush": {
+    "firstName": "taster",
+    "middleName": "",
+    "lastName": "js",
+    "gender": "Male",
+    "dob": "2004-1-14",
+    "password": "Pass@123",
+    "token": "NOVA-TOKEN-70HEF",
+    "registeredAt": "2026-05-18T06:18:27.791Z"
+  }
+}
