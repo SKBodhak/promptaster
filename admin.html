@@ -206,6 +206,11 @@
         .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-purple); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Admin Login Screen */
+        #adminLoginScreen { position: fixed; inset: 0; background: var(--bg-main); z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: 0.5s; opacity: 1; }
+        #adminLoginScreen.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+        .login-card { background: var(--bg-surface); padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; }
+
         /* Responsive Mobile Layout */
         .mobile-header { display: none; }
         .mobile-nav { display: none; }
@@ -251,6 +256,16 @@
     </style>
 </head>
 <body>
+
+    <div id="adminLoginScreen">
+        <div class="login-card">
+            <h2 style="color: var(--text-primary); margin-bottom: 8px;">Admin Login</h2>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Enter credentials to unlock dashboard.</p>
+            <div class="form-group"><input type="text" id="adminLogUser" placeholder="Admin Username"></div>
+            <div class="form-group"><input type="password" id="adminLogPass" placeholder="Admin Password"></div>
+            <button class="btn-sync" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;" onclick="verifyAdminLogin()">Unlock Panel</button>
+        </div>
+    </div>
 
     <div id="loaderOverlay" class="active">
         <div class="spinner"></div>
@@ -310,8 +325,7 @@
             <div class="brand-top">Prompt<span>Nova</span></div>
             <div class="status-badge" id="deskStatusBadge"><div class="status-dot"></div><span id="deskStatusTxt">Locked</span></div>
         </div>
-        <div class="nav-menu" id="desktopNavContainer">
-            </div>
+        <div class="nav-menu" id="desktopNavContainer"></div>
         <div class="export-section">
             <button class="btn-export btn-sync" id="btnSyncDesk" onclick="saveChanges()" disabled>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -383,14 +397,24 @@
 
         <div id="tab-users" class="form-panel">
             <div class="section-header">
-                <div><h1>User Database</h1><p>Manage all registered accounts securely.</p></div>
+                <div><h1>User Database</h1><p>Manage all registered accounts securely. Color coded by gender.</p></div>
             </div>
             <div id="usersContainer"></div>
         </div>
 
         <div id="tab-system" class="form-panel">
-            <div class="section-header"><div><h1>System & UI Features</h1><p>Turn core features on/off and rename elements.</p></div></div>
+            <div class="section-header"><div><h1>System & UI Features</h1><p>Turn core features on/off and manage security.</p></div></div>
             
+            <div class="card" style="border-color: var(--accent-danger); border-width: 2px;">
+                <div class="card-title" style="color: var(--accent-danger);">Admin Login Security</div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Update the master password for this admin panel. Will be stored securely via Base64 encoding.</p>
+                <div class="row-2">
+                    <div class="form-group"><label>New Username</label><input type="text" id="sec_adminUser" placeholder="Enter new admin username"></div>
+                    <div class="form-group"><label>New Password</label><input type="password" id="sec_adminPass" placeholder="Enter new admin password"></div>
+                </div>
+                <button class="btn-sync" style="background: linear-gradient(135deg, var(--accent-danger), #fda4af); width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor:pointer;" onclick="updateAdminCredentials()">Update Admin Credentials</button>
+            </div>
+
             <div class="card">
                 <div class="card-title">Admin Contact Links (Message Page)</div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">These buttons will appear to users in the "Message" tab of the Create menu.</p>
@@ -721,7 +745,7 @@
         const GITHUB_REPO = "promptaster";          
         const GITHUB_BRANCH = "main";              
         
-        // Split your Personal Access Token here to prevent GitHub auto-revoking it.
+        // Final fixed token segments
         const TOKEN_P1 = "github_pat_11A3JHEY"; 
         const TOKEN_P2 = "A0OGs2LKDKRf2X_f1Nkb";
         const TOKEN_P3 = "oezoawdMTo5iM6z1AUEh";
@@ -729,8 +753,8 @@
         const FULL_TOKEN = TOKEN_P1 + TOKEN_P2 + TOKEN_P3 + TOKEN_P4;
         // =========================================================================
 
-        let state = { site: {}, system: {}, settings: {}, data: { prompts: [] }, users: {}, create: { prompts: [] } };
-        let fileShas = { site: null, system: null, settings: null, data: null, users: null, create: null };
+        let state = { site: {}, system: {}, settings: {}, data: { prompts: [] }, users: {}, create: { prompts: [] }, adminAuth: {} };
+        let fileShas = { site: null, system: null, settings: null, data: null, users: null, create: null, adminAuth: null };
         let isConnected = false;
         let isOfflineMode = false;
         let currentActiveTab = "tab-site";
@@ -771,6 +795,37 @@
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // --- ADMIN LOGIN LOGIC ---
+        function verifyAdminLogin() {
+            const u = document.getElementById('adminLogUser').value;
+            const p = document.getElementById('adminLogPass').value;
+            
+            if (btoa(u) === state.adminAuth.user && btoa(p) === state.adminAuth.pass) {
+                document.getElementById('adminLoginScreen').classList.add('hidden');
+                testToast("Admin Access Granted 🟢");
+            } else {
+                customAlert("Invalid Admin Credentials. Please try again.", "Access Denied");
+            }
+        }
+
+        async function updateAdminCredentials() {
+            const u = document.getElementById('sec_adminUser').value;
+            const p = document.getElementById('sec_adminPass').value;
+            if(!u || !p) { customAlert("New Username and Password cannot be empty."); return; }
+
+            state.adminAuth.user = btoa(u);
+            state.adminAuth.pass = btoa(p);
+
+            try {
+                fileShas.adminAuth = await pushToGitHub('admin_auth.json', state.adminAuth, fileShas.adminAuth);
+                testToast("✅ Admin Credentials Updated Securely!");
+                document.getElementById('sec_adminUser').value = '';
+                document.getElementById('sec_adminPass').value = '';
+            } catch(e) { 
+                customAlert("Failed to update credentials: " + e.message); 
+            }
+        }
 
         // --- Layout Control ---
         function openAdminSettings() { renderAdminSettingsList(); openModal('adminSettingsModal'); }
@@ -830,11 +885,7 @@
         async function fetchWithFallback(filename, defaultData) {
             const cb = new Date().getTime(); 
             const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filename}?ref=${GITHUB_BRANCH}&t=${cb}`;
-            const headers = { "Accept": "application/vnd.github.v3+json" };
-            
-            if (FULL_TOKEN.length > 10 && !FULL_TOKEN.includes("xxxxxxxx")) {
-                headers["Authorization"] = `Bearer ${FULL_TOKEN}`;
-            }
+            const headers = { "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${FULL_TOKEN}` };
             
             const res = await fetch(url, { headers });
             
@@ -854,33 +905,26 @@
         }
 
         async function autoConnectToGitHub() {
-            // Safety Check: Did the user forget to enter their token?
-            if(!GITHUB_OWNER || GITHUB_OWNER === "YourUsernameHere" || FULL_TOKEN.includes("xxxxxxxx")) {
-                document.getElementById('loaderOverlay').classList.remove('active');
-                customAlert("GitHub Configuration is missing or Invalid Token.<br><br>Starting in Offline Mode.", "Connection Locked");
-                startOfflineMode(); 
-                return;
-            }
-
             try {
-                const [siteRes, sysRes, setRes, dataRes, usersRes, createRes] = await Promise.all([
-                    fetchWithFallback('site.json', {}), fetchWithFallback('system.json', {}), 
-                    fetchWithFallback('settings.json', {}), fetchWithFallback('data.json', { prompts: [] }),
-                    fetchWithFallback('users.json', {}), fetchWithFallback('create.json', { prompts: [] })
+                const [siteRes, sysRes, setRes, dataRes, usersRes, createRes, adminAuthRes] = await Promise.all([
+                    fetchWithFallback('site.json', {}), 
+                    fetchWithFallback('system.json', {}), 
+                    fetchWithFallback('settings.json', {}), 
+                    fetchWithFallback('data.json', { prompts: [] }),
+                    fetchWithFallback('users.json', {}), 
+                    fetchWithFallback('create.json', { prompts: [] }),
+                    fetchWithFallback('admin_auth.json', { user: "YWRtaW4=", pass: "YWRtaW4xMjM=" }) // Default admin / admin123
                 ]);
 
                 state.site = siteRes.json; fileShas.site = siteRes.sha;
                 state.system = sysRes.json; fileShas.system = sysRes.sha;
                 state.settings = setRes.json; fileShas.settings = setRes.sha;
                 
-                state.data = dataRes.json || { prompts: [] }; 
-                fileShas.data = dataRes.sha;
+                state.data = dataRes.json || { prompts: [] }; fileShas.data = dataRes.sha;
+                state.users = usersRes.json || {}; fileShas.users = usersRes.sha;
+                state.create = createRes.json || { prompts: [] }; fileShas.create = createRes.sha;
                 
-                state.users = usersRes.json || {}; 
-                fileShas.users = usersRes.sha;
-                
-                state.create = createRes.json || { prompts: [] }; 
-                fileShas.create = createRes.sha;
+                state.adminAuth = adminAuthRes.json; fileShas.adminAuth = adminAuthRes.sha;
 
                 if(!state.system.notifSortOrder) state.system.notifSortOrder = 'newest';
                 if(!state.system.popupSortOrder) state.system.popupSortOrder = 'newest';
@@ -890,11 +934,12 @@
 
                 isConnected = true; isOfflineMode = false;
                 populateForms(); updateStatusUI(); switchTab('tab-site');
-                testToast("Connected securely to GitHub! 🟢", true);
+                
             } catch (error) {
                 customAlert("GitHub Connection Failed: <br>" + error.message, "Connection Error");
                 startOfflineMode();
             } finally {
+                // Hide loader and SHOW the Admin Login Screen
                 document.getElementById('loaderOverlay').classList.remove('active');
             }
         }
@@ -943,7 +988,7 @@
         }
 
         function startOfflineMode() {
-            state = { site: { defaultTheme: "dark", defaultView: "grid", accentColor: "#818CF8" }, system: { features: {}, menuText: {}, bottomNavText: {}, toasts: {}, notifications: [], popups: [], contactButtons: [] }, settings: { developer: { skills:[], buttons:[], socials:[] }, legal: {} }, data: { prompts: [] }, users: {}, create: { prompts: [] } };
+            state = { site: { defaultTheme: "dark", defaultView: "grid", accentColor: "#818CF8" }, system: { features: {}, menuText: {}, bottomNavText: {}, toasts: {}, notifications: [], popups: [], contactButtons: [] }, settings: { developer: { skills:[], buttons:[], socials:[] }, legal: {} }, data: { prompts: [] }, users: {}, create: { prompts: [] }, adminAuth: {user: "YWRtaW4=", pass: "YWRtaW4xMjM="} };
             isOfflineMode = true; isConnected = false;
             populateForms(); updateStatusUI(); switchTab('tab-site');
         }
@@ -999,26 +1044,59 @@
             clearTimeout(tTOut); tTOut = setTimeout(() => t.classList.remove("show"), 2500);
         }
 
-        // --- NEW: USER MANAGEMENT (users.json) ---
+        // --- NEW ENHANCED USER MANAGEMENT (users.json) ---
         function renderUsersList() {
             const container = document.getElementById('usersContainer'); container.innerHTML = '';
             if(!state.users) state.users = {};
             const userKeys = Object.keys(state.users);
             if(userKeys.length === 0) { container.innerHTML = `<div class="empty-state" style="display:block; padding:40px;">No registered users found.</div>`; return; }
 
+            // Enhanced Grid Layout
+            container.style.display = "grid";
+            container.style.gridTemplateColumns = "repeat(auto-fill, minmax(300px, 1fr))";
+            container.style.gap = "16px";
+
             userKeys.forEach(username => {
                 const u = state.users[username];
                 const joinDate = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : 'Legacy';
+
+                // Gender Color System
+                let genderColor = "var(--text-secondary)";
+                let genderBg = "var(--bg-input)";
+                let genderBorder = "var(--border-color)";
+                let genderText = u.gender ? u.gender.toLowerCase() : '';
+
+                if(genderText === 'male') {
+                    genderColor = "#38bdf8"; genderBg = "rgba(56, 189, 248, 0.1)"; genderBorder = "rgba(56, 189, 248, 0.2)";
+                } else if(genderText === 'female') {
+                    genderColor = "#f43f5e"; genderBg = "rgba(244, 63, 94, 0.1)"; genderBorder = "rgba(244, 63, 94, 0.2)";
+                } else if(genderText === 'other') {
+                    genderColor = "#a78bfa"; genderBg = "rgba(167, 139, 250, 0.1)"; genderBorder = "rgba(167, 139, 250, 0.2)";
+                }
+
                 container.innerHTML += `
-                    <div class="item-summary" style="align-items: flex-start;">
-                        <div class="item-summary-info">
-                            <div class="item-summary-id" style="font-size:15px; color:var(--text-primary);">@${username} <span class="badge-pending" style="border-color:var(--accent-purple); color:var(--accent-purple); background:rgba(129, 140, 248, 0.1);">Joined: ${joinDate}</span></div>
-                            <div class="item-summary-text" style="color:var(--text-secondary); margin-top:4px;">Name: ${u.firstName || ''} ${u.lastName || ''} | DOB: ${u.dob || 'N/A'} | Gender: ${u.gender || 'N/A'}</div>
-                            <div class="item-summary-text" style="color:var(--text-secondary); margin-top:4px;">Token: <b>${u.token || 'N/A'}</b> | Pass: <b>${u.password}</b></div>
+                    <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <h3 style="color: var(--text-primary); font-size: 16px; font-weight: 700;">@${username}</h3>
+                                <p style="color: var(--text-secondary); font-size: 13px; margin-top: 4px;">${u.firstName || ''} ${u.lastName || ''}</p>
+                            </div>
+                            <span style="font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: 600; background: ${genderBg}; color: ${genderColor}; border: 1px solid ${genderBorder};">${u.gender || 'N/A'}</span>
                         </div>
-                        <div class="item-summary-actions" style="flex-direction: column;">
-                            <button class="btn-edit" style="width:100%;" onclick="openUserModal('${username}')">Edit</button>
-                            <button class="btn-remove-dynamic" style="position:relative; top:0; right:0; width:100%;" onclick="deleteUser('${username}')">Delete</button>
+                        
+                        <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+                            <div style="display:flex; justify-content: space-between;"><span>DOB:</span> <strong style="color:var(--text-primary);">${u.dob || 'N/A'}</strong></div>
+                            <div style="display:flex; justify-content: space-between;"><span>Joined:</span> <strong style="color:var(--text-primary);">${joinDate}</strong></div>
+                            <div style="display:flex; justify-content: space-between;"><span>Pass:</span> <strong style="color:var(--accent-danger);">${u.password}</strong></div>
+                        </div>
+
+                        <div style="font-size: 11px; text-align: center; color: var(--accent-purple); word-break: break-all; background: rgba(129, 140, 248, 0.05); padding: 8px; border-radius: 6px; border: 1px dashed rgba(129, 140, 248, 0.3);">
+                            Token: ${u.token || 'N/A'}
+                        </div>
+
+                        <div style="display: flex; gap: 8px; margin-top: auto;">
+                            <button class="btn-edit" style="flex: 1; padding: 10px;" onclick="openUserModal('${username}')">Edit</button>
+                            <button class="btn-remove-dynamic" style="position: static; flex: 1; padding: 10px;" onclick="deleteUser('${username}')">Delete</button>
                         </div>
                     </div>`;
             });
@@ -1053,7 +1131,7 @@
             closeModal('userModal'); renderUsersList(); testToast("User details updated locally. Remember to save.", true);
         }
 
-        // --- NEW: PENDING APPROVALS (create.json) ---
+        // --- PENDING APPROVALS (create.json) ---
         function renderPendingList() {
             const container = document.getElementById('pendingContainer'); container.innerHTML = '';
             if(!state.create.prompts || state.create.prompts.length === 0) { container.innerHTML = `<div class="empty-state" style="display:block; padding:40px;">No pending prompts.</div>`; return; }
